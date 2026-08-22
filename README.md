@@ -1,6 +1,6 @@
 # Skills
 
-Agent Skills für Claude Code.
+Agent skills for Claude Code.
 
 ## Installation
 
@@ -8,8 +8,8 @@ Agent Skills für Claude Code.
 npx skills add LordTyberias/Skills
 ```
 
-## Enthaltene Skills
+## Included skills
 
-| Skill | Zweck |
+| Skill | Purpose |
 | --- | --- |
-| [review-agents-setup](skills/review-agents-setup/SKILL.md) | Richtet im aktuellen Repository eine verpflichtende Pre-Pull-Request-Review-Loop ein: `/review-loop` als Orchestrator, projektspezifische Architect-, Code- und Security-Reviewer (optional Performance und Requirements) und verankert die Regel in `CLAUDE.md`. |
+| [review-agents-setup](skills/review-agents-setup/SKILL.md) | Sets up a mandatory pre-pull-request review loop in the current repository: `/review-loop` as the orchestrator, project-specific architect, code, and security reviewers (optionally performance and requirements), and anchors the rule in `CLAUDE.md`. |
