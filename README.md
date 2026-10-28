@@ -48,3 +48,27 @@ Finally the skill anchors the loop as a hard rule in the repository's `CLAUDE.md
 surgically, never rewritten — so the next agent that opens the project cannot skip it: `/review-loop`
 is mandatory before every pull request, the local agents may not be substituted by generic ones, and
 security `critical` / `high` findings can never be waived.
+
+## Plugins
+
+| Plugin | Purpose |
+| --- | --- |
+| [auto-effort-picker](plugins/auto-effort-picker) | Picks the effort level each prompt needs before Claude starts. For `/ticket`, it judges the YouTrack ticket once it has loaded. |
+
+### auto-effort-picker
+
+Before Claude starts on a prompt, a short Sonnet 5.5 call reads the prompt and picks Low, Medium,
+High, Extra high or Max with four questions, stopping at the first yes: back and forth or simple
+(Low), a hidden mistake would be costly (High), a long, hard and critical hand-off (Extra high),
+everything else (Medium). Slash commands are skipped, except `/ticket`: there the pick waits until
+`mcp__youtrack__get_issue` has returned the ticket and judges the ticket text.
+
+Commands: `/auto-effort-picker` (status), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
+`/auto-effort-picker off`, `/auto-effort-picker on`.
+
+Install:
+
+```
+/plugin marketplace add LordTyberias/Skills
+/plugin install auto-effort-picker@lordtyberias-skills
+```
