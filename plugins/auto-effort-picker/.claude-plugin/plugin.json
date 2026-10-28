@@ -1,6 +1,6 @@
 {
   "name": "auto-effort-picker",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and offers Switch to that level, or sets it by itself in auto mode. For /ticket it judges the loaded YouTrack ticket.",
   "author": {
     "name": "Benjamin Strecker",

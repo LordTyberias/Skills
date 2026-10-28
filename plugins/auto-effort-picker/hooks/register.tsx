@@ -42,6 +42,20 @@ let held: { text: string; mine: number } | null = null
 let ticketWait: number | null = null
 const TICKET_TOOL = 'mcp__youtrack__get_issue'
 
+// The status line script reads "<level sent> <picker level>" from this file per session.
+// ponytail: one small file per session, never cleaned up; prune by age if the folder grows.
+let lastStatus = ''
+async function writeStatus($: EngineInterface, sent: string, picker: string) {
+  const line = `${sent} ${picker}`
+  if (line === lastStatus) return
+  lastStatus = line
+  try {
+    await $.fs.write(`${home}/.claude/mods-state/auto-effort-picker/${await $.session.id()}`, line)
+  } catch (err) {
+    await log($, 'status file', err)
+  }
+}
+
 // plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
 // ponytail: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
 function homeOf($: EngineInterface) {
@@ -386,6 +400,7 @@ export const register: Register = on => {
       value = enabled && hold ? hold.level : null
     }
     const want = turnLevel ?? (enabled ? (value ?? null) : null)
+    await writeStatus($, want ?? e.effort, e.effort)
     if (!want || want === e.effort) return yield* next(e)
     void log($, 'request', `${e.effort} -> ${want}`)
     return yield* next({ ...e, effort: want })
