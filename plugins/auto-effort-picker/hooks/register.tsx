@@ -41,6 +41,19 @@ let held: { text: string; mine: number } | null = null
 // The prompt is a /ticket run: the pick waits for the ticket text from YouTrack.
 let ticketWait: number | null = null
 const TICKET_TOOL = 'mcp__youtrack__get_issue'
+// The same /ticket run: the approved plan picks again, for the build.
+let planWait: number | null = null
+// An epic is a choice, not the work: the pick waits for the sub-ticket the run moves to In Progress.
+let epicId = ''
+let loaded = new Map<string, string>()
+
+async function pickTicket($: EngineInterface, ticket: string, mine: number) {
+  ticketWait = null
+  loaded = new Map()
+  const text = `A ticket to work through, loaded from YouTrack:\n${ticket}`
+  if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'ticket auto', err))
+  else await suggest($, text, mine).catch(err => log($, 'ticket suggest', err))
+}
 
 // The status line script reads "<level sent> <picker level>" per session id from one JSON file.
 // $.fs cannot delete, so ended and day-old sessions are dropped from the file instead.
@@ -264,7 +277,8 @@ async function pick($: EngineInterface, text: string, now: Level | ''): Promise<
   const lastReply = lastAssistantText(messages).slice(0, 600)
   const r = await $.model.complete({
     model: 'claude-sonnet-5-5',
-    prompt: pickPrompt(text.slice(0, 4000), lastReply, now),
+    // Tickets and plans run long; the small pick reads all of a normal one.
+    prompt: pickPrompt(text.slice(0, 40_000), lastReply, now),
     maxTokens: 120,
     effort: 'low',
     timeoutMs: 20_000,
@@ -383,12 +397,15 @@ export const register: Register = on => {
     gen += 1
     turnLevel = null
     ticketWait = null
+    planWait = null
+    epicId = ''
+    loaded = new Map()
     const mine = gen
     // A new prompt makes an unanswered offer stale.
     const b = await getBand($).catch(() => null)
     if (b?.phase === 'offer') await setBand($, null).catch(() => undefined)
     // The pick waits for the turn's first request, which carries the level the chat really runs at.
-    if (isTicket) ticketWait = mine
+    if (isTicket) ticketWait = planWait = mine
     else held = { text, mine }
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -421,16 +438,57 @@ export const register: Register = on => {
   })
 
   // /ticket: pick from the first ticket the main chat loads, then hold that level for the rest of the turn.
-  // ponytail: first get_issue only; for an epic that is the epic, not the chosen sub-ticket.
+  // An epic waits: its sub-tickets are kept until the run moves the chosen one to In Progress.
   on('tool.call', { tool: TICKET_TOOL }, async ($, e, next) => {
     const r = await next(e)
     if (off || !enabled || ticketWait === null || ticketWait !== gen || e.agentId !== undefined) return r
     if (r.deny || r.isError || !r.text) return r
-    const mine = ticketWait
-    ticketWait = null
-    const text = `A ticket to work through, loaded from YouTrack:\n${r.text}`
-    if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'ticket auto', err))
-    else await suggest($, text, mine).catch(err => log($, 'ticket suggest', err))
+    let issue: { id?: unknown; customFields?: { Type?: unknown } } = {}
+    try {
+      issue = JSON.parse(r.text) as typeof issue
+    } catch {
+      // Not JSON: judge the text as it is.
+    }
+    const id = typeof issue.id === 'string' ? issue.id : ''
+    if (epicId) {
+      if (id) loaded.set(id, r.text)
+      return r
+    }
+    if (id && issue.customFields?.Type === 'Epic') {
+      epicId = id
+      return r
+    }
+    await pickTicket($, r.text, ticketWait)
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // The epic's chosen sub-ticket goes to In Progress (ticket.md step 1a): pick from its loaded text.
+  on('tool.call', { tool: 'mcp__youtrack__update_issue' }, async ($, e, next) => {
+    const r = await next(e)
+    if (off || !enabled || !epicId || ticketWait === null || ticketWait !== gen || e.agentId !== undefined) return r
+    if (r.deny || r.isError) return r
+    const id = typeof e.issueId === 'string' ? e.issueId : ''
+    const state = (e.customFields as { State?: unknown } | undefined)?.State
+    const ticket = loaded.get(id)
+    if (id === epicId || state !== 'In Progress' || !ticket) return r
+    await pickTicket($, ticket, ticketWait)
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // /ticket: the approved plan sets the level for the build; the ticket's pick covered grilling and planning.
+  // A rejected plan comes back as an error, so the next ExitPlanMode tries again.
+  on('tool.call', { tool: 'ExitPlanMode' }, async ($, e, next) => {
+    const r = await next(e)
+    if (off || !enabled || planWait === null || planWait !== gen || e.agentId !== undefined) return r
+    if (r.deny || r.isError) return r
+    const plan = (r.result as { plan?: string | null } | undefined)?.plan
+    if (!plan) return r
+    const mine = planWait
+    planWait = null
+    const text = `An approved plan to build now, judge the build work:
+${plan}`
+    if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'plan auto', err))
+    else await suggest($, text, mine).catch(err => log($, 'plan suggest', err))
     return r
   }).catch(($, e, next) => next(e))
 

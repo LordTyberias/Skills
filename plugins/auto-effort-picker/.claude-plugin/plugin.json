@@ -1,7 +1,7 @@
 {
   "name": "auto-effort-picker",
-  "version": "0.2.2",
-  "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and offers Switch to that level, or sets it by itself in auto mode. For /ticket it judges the loaded YouTrack ticket.",
+  "version": "0.3.1",
+  "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and offers Switch to that level, or sets it by itself in auto mode. For /ticket it judges the loaded YouTrack ticket for planning, then the approved plan for the build.",
   "author": {
     "name": "Benjamin Strecker",
     "url": "https://github.com/LordTyberias"
