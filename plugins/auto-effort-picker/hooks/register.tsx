@@ -41,6 +41,8 @@ let held: { text: string; mine: number } | null = null
 // The prompt is a /ticket run: the pick waits for the ticket text from YouTrack.
 let ticketWait: number | null = null
 const TICKET_TOOL = 'mcp__youtrack__get_issue'
+// The same /ticket run: the approved plan picks again, for the build.
+let planWait: number | null = null
 
 // The status line script reads "<level sent> <picker level>" per session id from one JSON file.
 // $.fs cannot delete, so ended and day-old sessions are dropped from the file instead.
@@ -383,12 +385,13 @@ export const register: Register = on => {
     gen += 1
     turnLevel = null
     ticketWait = null
+    planWait = null
     const mine = gen
     // A new prompt makes an unanswered offer stale.
     const b = await getBand($).catch(() => null)
     if (b?.phase === 'offer') await setBand($, null).catch(() => undefined)
     // The pick waits for the turn's first request, which carries the level the chat really runs at.
-    if (isTicket) ticketWait = mine
+    if (isTicket) ticketWait = planWait = mine
     else held = { text, mine }
     return next(e)
   }).catch(($, e, next) => next(e))
@@ -431,6 +434,23 @@ export const register: Register = on => {
     const text = `A ticket to work through, loaded from YouTrack:\n${r.text}`
     if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'ticket auto', err))
     else await suggest($, text, mine).catch(err => log($, 'ticket suggest', err))
+    return r
+  }).catch(($, e, next) => next(e))
+
+  // /ticket: the approved plan sets the level for the build; the ticket's pick covered grilling and planning.
+  // A rejected plan comes back as an error, so the next ExitPlanMode tries again.
+  on('tool.call', { tool: 'ExitPlanMode' }, async ($, e, next) => {
+    const r = await next(e)
+    if (off || !enabled || planWait === null || planWait !== gen || e.agentId !== undefined) return r
+    if (r.deny || r.isError) return r
+    const plan = (r.result as { plan?: string | null } | undefined)?.plan
+    if (!plan) return r
+    const mine = planWait
+    planWait = null
+    const text = `An approved plan to build now, judge the build work:
+${plan}`
+    if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'plan auto', err))
+    else await suggest($, text, mine).catch(err => log($, 'plan suggest', err))
     return r
   }).catch(($, e, next) => next(e))
 
