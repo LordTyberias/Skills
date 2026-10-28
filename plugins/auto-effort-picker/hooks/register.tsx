@@ -42,18 +42,32 @@ let held: { text: string; mine: number } | null = null
 let ticketWait: number | null = null
 const TICKET_TOOL = 'mcp__youtrack__get_issue'
 
-// The status line script reads "<level sent> <picker level>" from this file per session.
-// ponytail: one small file per session, never cleaned up; prune by age if the folder grows.
+// The status line script reads "<level sent> <picker level>" per session id from one JSON file.
+// $.fs cannot delete, so ended and day-old sessions are dropped from the file instead.
+// shortcut: two sessions writing at the same moment can drop each other's entry, lock if that shows up.
+const DAY_MS = 86_400_000
 let lastStatus = ''
+async function editStatus($: EngineInterface, fn: (m: Record<string, { line: string; at: number }>) => void) {
+  const path = `${home}/.claude/mods-state/auto-effort-picker.json`
+  try {
+    const m = (await $.fs.exists(path)) ? (JSON.parse(String(await $.fs.read(path))) as Record<string, { line: string; at: number }>) : {}
+    fn(m)
+    await $.fs.write(path, JSON.stringify(m))
+  } catch (err) {
+    await log($, 'status file', err)
+  }
+}
+
 async function writeStatus($: EngineInterface, sent: string, picker: string) {
   const line = `${sent} ${picker}`
   if (line === lastStatus) return
   lastStatus = line
-  try {
-    await $.fs.write(`${home}/.claude/mods-state/auto-effort-picker/${await $.session.id()}`, line)
-  } catch (err) {
-    await log($, 'status file', err)
-  }
+  const id = await $.session.id()
+  const now = await $.clock.now()
+  await editStatus($, m => {
+    for (const k of Object.keys(m)) if (now - (m[k]?.at ?? 0) > DAY_MS) delete m[k]
+    m[id] = { line, at: now }
+  })
 }
 
 // plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
@@ -419,6 +433,14 @@ export const register: Register = on => {
     else await suggest($, text, mine).catch(err => log($, 'ticket suggest', err))
     return r
   }).catch(($, e, next) => next(e))
+
+  on('session.end', async ($, e, next) => {
+    await editStatus($, m => {
+      delete m[e.sessionId]
+    })
+    lastStatus = ''
+    return next(e)
+  })
 
   on('command.run', { command: 'auto-effort-picker' }, async ($, e) => {
     if (off) return { text: 'Auto Effort Picker is off. Turn it on with /mods.' }
