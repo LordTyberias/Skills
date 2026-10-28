@@ -42,9 +42,12 @@ let held: { text: string; mine: number } | null = null
 let ticketWait: number | null = null
 const TICKET_TOOL = 'mcp__youtrack__get_issue'
 
-// plugin.root may carry backslashes on Windows.
+// plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
+// ponytail: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
 function homeOf($: EngineInterface) {
-  return $.plugin.root.split(/[\\/]\.claude[\\/]/)[0] ?? ''
+  const r = $.plugin.root
+  const m = /^(.*?)[\\/]\.claude[\\/]/.exec(r) ?? /^(.*?[\\/](?:Users|home)[\\/][^\\/]+)/i.exec(r)
+  return m?.[1] ?? r
 }
 
 // The /mods switchboard turns this mod off in every chat with switches.json.
