@@ -1,7 +1,7 @@
 ---
 name: repo-security-hardening
 description: Runs a complete security review of a code repo in one pass. First an inventory (languages, projects, dependencies, vulnerabilities, analysis setup, risky patterns, CI, tools), then only the checks that fit, derived from it (analyzer measurement, NuGet and npm audit, legacy and binary dependencies, Semgrep, secret scan, GitHub, Dependabot and Actions, attack surface review, threat model for planned features), and a report with change proposals. Use this skill whenever the user asks for a vulnerability check, a security audit, security hardening, a repo inventory for tool selection, or a security review for a ticket, even if they only say to check the repo for security holes.
-compatibility: Claude Code on Windows (PowerShell) or Linux/macOS (Bash). Works for any language; .NET gets the deepest coverage. Requires git. Optional depending on the repo: dotnet, gh, semgrep, docker or gitleaks, uv, node, osv-scanner, and the ecosystem's own audit tools.
+compatibility: "Claude Code on Windows (PowerShell) or Linux/macOS (Bash). Works for any language; .NET gets the deepest coverage. Requires git. Optional depending on the repo: dotnet, gh, semgrep, docker or gitleaks, uv, node, osv-scanner, and the ecosystem's own audit tools."
 ---
 
 # Repo security review in one pass
