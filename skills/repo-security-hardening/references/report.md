@@ -66,9 +66,24 @@ Create only what applies:
 | `dependabot.proposed.yml` | Extended Dependabot configuration |
 | `ci-sast.md` | Sketch of a PR check with code scanning |
 | `follow-up-tickets.md` | Proposals for separate tickets including SEC requirements from phase 7 |
+| `changes.md` | List of selectable changes for the selection round at stop 2, see below |
 | `ticket-comment.md` (in the `artifacts/` folder) | Draft, see below |
 
 Each proposal states what it does, what it may cost, and how to verify it. Proposals change nothing in the repo; they are files.
+
+## Selectable changes (`artifacts/proposals/changes.md`)
+
+Always create this file. It is the basis for the multiple-choice selection round at stop 2 in `SKILL.md`. One row per change that can be applied on its own, sorted by the highest severity it fixes:
+
+| ID | Short name (max. 5 words) | Area | What changes (file, setting) | Findings | Effort S/M/L | Fix risk | Depends on | Selected |
+|---|---|---|---|---|---|---|---|---|
+
+- Areas: dependencies and supply chain, build and analyzer settings, CI and Dependabot, code fix.
+- Split proposal files into independent changes (e.g. `Directory.Build.props.snippet` into "NuGet audit" and "analyzer level"), so the user can choose each one separately.
+- Every code fix for a finding is its own change.
+- "Depends on" names the IDs that must be applied first.
+- Changes outside the repo (GitHub settings, key rotation, tickets) do not get an ID. List them below the table under "For the user".
+- The "Selected" column stays empty until stop 2.
 
 ## Ticket comment (`artifacts/ticket-comment.md`)
 

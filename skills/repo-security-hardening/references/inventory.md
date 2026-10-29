@@ -22,6 +22,7 @@ Contents: 1 Overview, 2 Structure, 3 Dependencies, 4 Vulnerability status, 5 Cod
 - Present or not, with short content: `Directory.Build.props`, `Directory.Build.targets`, `Directory.Packages.props` (Central Package Management), repo `nuget.config` (feed names and hosts only, redact paths containing keys), `packages.lock.json`, `packages.config`.
 - The **user** NuGet.Config is not read. Only note that feeds (possibly with keys) may live there.
 - Non-.NET repos: briefly describe the build system and structure (CMake, Gradle, npm workspaces, etc.) and adapt the sections accordingly.
+- **JS/TS frontends:** framework and version from `package.json` (Angular, React, Next.js, Vue, Svelte), build tool (Angular CLI, Vite, webpack, Next.js), rendering (SPA only, SSR, static export), package manager by lockfile (`package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`), workspaces/monorepo (Nx, Turborepo). From `angular.json`, `vite.config.*`, `next.config.*`, `webpack.config.*`: source maps in the production build, dev server proxy, configured security headers. Environment files (`environment*.ts`, `.env*`) with names only, never values.
 
 ## 3. Dependencies
 
@@ -74,6 +75,9 @@ Regex search in source and configuration files of the languages found in section
 | Database | `SQLiteConnection`, `SqliteConnection`, EF, Dapper, ADO.NET |
 | Clipboard, serial devices | `Clipboard`, `SerialPort`, `SerialPortStream`, NMEA, NTRIP, CAN |
 | JS | `eval`, `new Function`, `innerHTML`, `dangerouslySetInnerHTML` (exclude the checked-in minified bundle, it produces false hits) |
+| Angular | `bypassSecurityTrust` (Html, Url, ResourceUrl, Script, Style), `[innerHTML]`, `DomSanitizer`, `ElementRef` with `nativeElement`, `Renderer2`, `document.write`, `localStorage`/`sessionStorage` with tokens |
+| React / Next.js | `dangerouslySetInnerHTML`, `href={`/`src={` with variables, `ref.current.innerHTML`, `"use server"`, `getServerSideProps`, API routes (`pages/api/`, `app/**/route.ts`), `NEXT_PUBLIC_`, `VITE_`, `REACT_APP_` |
+| Browser APIs | `postMessage`, `addEventListener('message'`, `window.open`, `<script src=` without `integrity`, `localStorage.setItem` with tokens |
 | Python | `pickle`, `yaml.load` without `SafeLoader`, `eval`, `exec`, `subprocess` with `shell=True`, `os.system`, `tarfile.extractall`, `verify=False`, raw SQL via f-strings |
 | Java/Kotlin | `ObjectInputStream`, `Runtime.exec`, `ProcessBuilder`, `DocumentBuilderFactory` / `SAXParserFactory` without disabled DTDs, `Statement.execute` with concatenation, `TrustManager` that accepts all |
 | Go | `os/exec`, `text/template` for HTML, `InsecureSkipVerify`, `database/sql` with `fmt.Sprintf`, `unsafe` |

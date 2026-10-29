@@ -31,7 +31,7 @@ Goal: how many findings would security rules produce, before anything is locked 
 The skill does not install Semgrep. If it is not present, that is in the plan (stop 1) with the user's decision.
 
 1. `semgrep --version`. Do **not** call `semgrep login`. Check whether a login exists without showing tokens. Always use `--metrics=off`. Loading rules from the registry does not upload code.
-2. Find the matching registry rulesets (C#, C/C++, Python, JS/TS, Java, secrets, Dockerfile, GitHub Actions) in the Semgrep docs and name them in the report.
+2. Find the matching registry rulesets (C#, C/C++, Python, JS/TS, React, Angular, Next.js, Java, secrets, Dockerfile, GitHub Actions) in the Semgrep docs and name them in the report.
 3. Separate runs per language, SARIF into `artifacts/`. Exclusions: third-party code (`Thirdparty/`, `vendor/`), local caches (`graphify-out/` or similar), export dumps, `bin/`, `obj/`, `node_modules/`, shipped binary folders, checked-in minified bundle. The test project runs separately.
 4. **Limits for C#:** the Community Edition without login covers C# only up to version 7.0 and only within single functions. Newer C# produces parse errors and skipped files. List them separately under "Not analyzed" and do not count them as findings. For a pure C# repo, Semgrep is therefore only a coarse extra net; the Roslyn analyzers are the main check.
 5. Outdated instructions: if older instructions mention `semgrep-mcp` or `uvx semgrep-mcp`: the standalone server is archived, and the MCP server now ships in the Semgrep binary (`semgrep mcp`). You do not need it for this review; the CLI is enough and produces a file you evaluate yourself.

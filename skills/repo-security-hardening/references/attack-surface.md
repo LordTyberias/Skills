@@ -62,6 +62,22 @@ The reason for asking about **origin**: almost every vulnerability in these area
 - Authentication and authorization per endpoint, HMAC or signature check (constant-time comparison, key origin, replay protection via timestamp), size limits for request bodies, rate limiting, error output without details.
 - Forms (Blazor, Razor): validation, anti-forgery, mail header injection, rate limiting, security headers, HTTPS and HSTS, cookie settings, CORS.
 
+**Browser frontends (SPA)** (Angular, React, Vue, Svelte)
+- XSS sinks: Angular `bypassSecurityTrust*` and `[innerHTML]` (Angular sanitizes, a bypass switches that off), direct DOM access via `ElementRef.nativeElement` or `Renderer2`; React `dangerouslySetInnerHTML`, `href`/`src` with user data (React does not block `javascript:` URLs reliably), refs that write HTML. Trace each one back to the data source. Sanitizer (e.g. DOMPurify) used where HTML is intentional?
+- Secrets in the bundle: everything in `environment*.ts` and in variables with `NEXT_PUBLIC_`, `VITE_`, `REACT_APP_` is public. Check whether anything there is a real secret (API keys with write rights, client secrets) rather than a public identifier. Source maps in the production build expose the source code: deliberate or not?
+- Tokens and sessions: access or refresh tokens in `localStorage`/`sessionStorage` (readable by any XSS) instead of httpOnly, Secure, SameSite cookies; logout clears all copies; OAuth/OIDC in the browser only with authorization code + PKCE, no implicit flow, `state` and `nonce` checked.
+- Authorization: route guards (`CanActivate`, protected routes) are UX only. Check that the backend enforces every permission the frontend hides.
+- CSP and headers: is there a CSP (in the server, `index.html` meta, or `next.config.*` headers) and does it need `unsafe-inline`/`unsafe-eval`? Angular builds without `unsafe-eval` in AOT mode. Also HSTS, `X-Content-Type-Options`, `frame-ancestors`.
+- Cross-origin: CORS configuration of the API used, `withCredentials`, dev server proxy (`proxy.conf.json`, Vite `server.proxy`) not usable as a production path, `postMessage` with origin check on receive and a fixed target origin on send, `window.open` with `noopener`.
+- Third-party scripts: analytics, tag managers, and CDNs loaded without SRI (`integrity`) or from many domains.
+- Open redirects: `returnUrl`/`redirect` query parameters after login only to internal paths.
+
+**Server-side rendering and full-stack frameworks** (Next.js, Angular SSR, Remix, Nuxt)
+- Server actions (`"use server"`), API routes, and route handlers are public HTTP endpoints: authentication and authorization in every one, input validation (e.g. zod), no trust in hidden form fields.
+- Data passed to client components or serialized into the page (`getServerSideProps`, server components props, Angular `TransferState`): no secrets or internal fields.
+- SSRF via server-side `fetch` with URLs from the request; image optimizer `remotePatterns` / `domains` not too broad.
+- Middleware as the only auth check (path matching gaps), caching of personalized responses, error pages without stack traces in production.
+
 **Web view, OAuth, Markdown** (WebView, WebView2, BlazorWebView, Markdown rendering)
 - OAuth: PKCE, `state`, redirect handling, token storage (DPAPI, Credential Manager, Keychain, plaintext?), tokens in logs.
 - WebView settings: DevTools in release, navigation to foreign URLs restricted, downloads, certificate errors, data folder.

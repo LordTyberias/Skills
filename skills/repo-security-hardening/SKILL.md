@@ -26,7 +26,7 @@ Respond in the user's language, unless the repo's CLAUDE.md requires something e
 | 6 | Attack surface review | `references/attack-surface.md` (part 1) |
 | 7 | Requirements for planned features | `references/attack-surface.md` (part 2) |
 | 8 | Report, proposals, ticket draft | `references/report.md` |
-| **Stop 2** | Review results, approve implementation | below |
+| **Stop 2** | Multiple-choice selection of the changes, then implementation | below |
 
 Between stop 1 and stop 2 everything runs without interruption. Read each reference file only when you start its phase. That saves context and keeps the phases separate.
 
@@ -77,7 +77,7 @@ These rules always apply. They protect against the mistakes that actually happen
 4. Create the progress file `artifacts/security-state.md`: date, mode, branch, starting HEAD, completed phases, decisions made. Update it after each phase. This lets a run continue after context compaction or an abort: if the file exists, briefly ask whether you should continue from there.
 5. The **mode** is settled together with everything else at stop 1, so the user is asked only once. If the invocation already names it (`report` or `implement`), that applies. Until it is decided, everything runs read-only, as in `report` mode.
    - `report`: Read and measure only. Change proposals go into `artifacts/proposals/` as files. Right for team and company repos, on ticket branches, and when work happens in parallel.
-   - `implement`: Like `report`, but after stop 2 you may implement the approved proposals on the branch `security/hardening-YYYY-MM` as individual commits. Right for your own repos.
+   - `implement`: Like `report`, but after the selection round at stop 2 you implement the selected changes on the branch `security/hardening-YYYY-MM` as individual commits. Right for your own repos.
 
    At stop 1, recommend a mode based on the "working mode hints" from the inventory. When in doubt, `report`. On an existing ticket branch or with visible parallel work, `report` always applies.
 
@@ -107,7 +107,8 @@ Wait for the answer. If the user said "no questions" or "fully automatic" at inv
 | Legacy packages (`packages.config`) | `packages.config` present |
 | Shipped binaries | versioned `.dll`, `.exe`, `.jar`, or `.so` outside `bin`, `obj`, `packages` |
 | Native components | packages like GDAL, OpenCV, SQLite bundles, WebView2, Pdfium, Skia, or `*.vcxproj`/CMake |
-| npm audit and bundle comparison | `package.json` with lockfile, checked-in minified bundle |
+| npm/yarn/pnpm audit and bundle comparison | `package.json` with lockfile, checked-in minified bundle |
+| SPA and SSR checklists | Angular, React, Vue, Svelte, Next.js, or another frontend framework in `package.json` |
 | Python dependencies | `requirements.txt`, `pyproject.toml`, `Pipfile.lock`, `poetry.lock`, or `uv.lock` |
 | Java/Kotlin dependencies | `pom.xml`, `build.gradle`, or `build.gradle.kts` |
 | Go dependencies | `go.mod` |
@@ -138,12 +139,35 @@ Work through the active modules in the order of the table. Keep in mind:
 
 Read `references/report.md` and create the full report, the proposal files in `artifacts/proposals/`, the ticket comment draft, and run the final check for secrets in `artifacts/`. Output at most 20 lines of summary in the chat (number of findings by severity, the three most important, file paths, comparison of HEAD with phase 0).
 
-## Stop 2: Results and implementation
+## Stop 2: Selection round and implementation
 
-Stop here. Change nothing until the user has reviewed the results.
+Stop here. Change nothing until the user has chosen in the selection round below. This stop is never skipped, not even when the run was started "without questions".
 
-- **`report` mode:** The run is over. Mention which proposals are in `artifacts/proposals/` and how they can land through the repo's process (ticket, review).
-- **`implement` mode:** Ask which proposals should be implemented. Implement only what was approved, each as its own commit. Stage only your own files (`git add <path>`, never `git add -A`), check `git status` and `git log -3` before every commit, and run the repo's gate after every change (`tools/gate.ps1` if present, otherwise build and tests per `CLAUDE.md`). No push. Code fixes for individual findings only with explicit approval per finding, with a test, as a separate commit.
+### Selection round (multiple choice)
+
+The basis is the list of selectable changes in `artifacts/proposals/changes.md` (IDs `C-01`, `C-02`, ..., built in phase 8, see `references/report.md`).
+
+**First check whether the `grill-with-docs` skill is available**, i.e. whether it appears in this session's list of available skills. If it does, invoke it with the Skill tool and run the selection round through it; otherwise use `AskUserQuestion` as described below.
+
+- **With `grill-with-docs`:** Hand it `changes.md` as the plan to decide on. The content of the round stays the same as steps 1 to 3 below (mode question, selection per change, dependencies); only the format follows that skill. Each change is one question with the choices "apply", "do not apply", or "apply adapted" and your recommended answer. The mode question and changes without open dependencies form the first round; changes that depend on others follow in later rounds. The round is done when every change has an answer and the user confirms the final list.
+- **Docs from `grill-with-docs` respect ground rule 3.** Glossary terms (`CONTEXT.md`) and ADRs it wants to write are changes to the repo. In `report` mode, or as long as the mode question is still open, write them only to `artifacts/proposals/docs/` (e.g. `artifacts/proposals/docs/adr/0007-….md`). If the user chose implementation, they go into the repo as their own commit like any other selected change. A good ADR candidate is a change the user deliberately rejects (e.g. a version pin that stays despite a finding): it becomes a deliberate decision in the sense of ground rule 8.
+
+Without `grill-with-docs`, ask with the `AskUserQuestion` tool:
+
+1. **Mode question (only in `report` mode).** Single choice: "Keep as proposals only" or "Implement selected changes on the branch `security/hardening-YYYY-MM`". Recommend "proposals only" on ticket branches, in team repos, and with visible parallel work, and name that reason in the option's description. If the user stays with proposals, skip steps 2 and 3, mention how the proposals in `artifacts/proposals/` can land through the repo's process (ticket, review), and end the run.
+2. **Selection questions.** `multiSelect: true`, one option per change. Group the changes by area (dependencies and supply chain, build and analyzer settings, CI and Dependabot, code fixes per finding) and order the questions by the highest severity they contain. The tool allows at most 4 options per question and 4 questions per call: split larger groups into several questions and make further calls until every change has been offered once.
+   - Label: ID plus a short name, e.g. `C-03 NuGet audit mode all`. Description: what changes in which file, linked findings (`SEC-…`), effort, and fix risk.
+   - Mark changes that fix a critical or high finding at low fix risk as "(Recommended)" and put them first.
+   - The automatic "Other" answer may contain free text (e.g. "C-07 only for project X"). Apply it to the selection or ask back if it is unclear.
+3. **Check dependencies.** If a selected change depends on one that was not selected (e.g. locking in an analyzer rule as an error while its current findings stay unfixed under `TreatWarningsAsErrors`), ask one follow-up question with the options: also take the dependency, drop the change, or adapt it (e.g. start the rule as `warning`). Then show the final list in the order of application and start.
+
+Record the selection in `artifacts/security-state.md` and mark the selected items in `changes.md`, so an interrupted run can continue with the same selection. If `AskUserQuestion` is not available, show the same groups as a numbered list in the chat and let the user answer with the IDs.
+
+Changes outside the repo (enabling Dependabot or secret scanning in the GitHub settings, rotating keys, creating tickets) are not offered as options. List them in the chat as "for you to do".
+
+### Implementation
+
+Implement only what was selected, each change as its own commit on the branch `security/hardening-YYYY-MM`. Stage only your own files (`git add <path>`, never `git add -A`), check `git status` and `git log -3` before every commit, and run the repo's gate after every change (`tools/gate.ps1` if present, otherwise build and tests per `CLAUDE.md`). No push. A code fix for a finding counts as approved only if it was selected as its own change. It comes with a test and gets its own commit. If the gate fails after a change, stop, show the error, and ask whether to fix, revert, or skip the change. Finally, show the commits created and the changes that were not implemented, with the reason.
 
 Rules for locking in analyzer rules:
 - If the repo has `TreatWarningsAsErrors=true`, rules with current findings may only be locked in once those are fixed or justified. Rules without findings (e.g. crypto rules in a repo without crypto) may go in right away, because they catch later mistakes.

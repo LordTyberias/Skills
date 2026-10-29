@@ -55,14 +55,18 @@ security `critical` / `high` findings can never be waived.
 Run in the repository you want to check. The skill first writes an inventory — languages, projects,
 dependencies, known vulnerabilities, analysis setup, risky code patterns, CI, and installed tools —
 and derives from it which checks are worth running: analyzer measurement, dependency audits per
-ecosystem (NuGet, npm, Python, Java, Go, Rust, Ruby, PHP, containers), shipped binaries, Semgrep and
-language-native security linters, secret scan, GitHub settings, Dependabot and workflows, an attack
-surface review, and a threat model for planned features. It stops once to confirm the plan and any
+ecosystem (NuGet, npm, yarn, pnpm, Python, Java, Go, Rust, Ruby, PHP, containers), shipped binaries,
+Semgrep and language-native security linters, secret scan, GitHub settings, Dependabot and
+workflows, an attack surface review (with dedicated checklists for Angular/React SPAs and SSR
+frameworks like Next.js), and a threat model for planned features. It stops once to confirm the plan and any
 tool installs, then runs through and ends with `artifacts/security-report.md` and proposal files.
 
 The repository stays untouched: everything is written to a locally excluded `artifacts/` folder,
-secret values are never printed, and nothing is installed or posted without consent. In `implement`
-mode, approved proposals are applied afterwards as individual commits on a separate branch. Works
+secret values are never printed, and nothing is installed or posted without consent. At the end, a
+multiple-choice round lets you pick which changes are applied (in `report` mode it first asks
+whether to apply anything at all); each selected change becomes its own commit on a separate branch.
+If the `grill-with-docs` skill is installed, the round runs through it, and rejected changes can be
+recorded as ADRs. Works
 on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
 
 ## Plugins

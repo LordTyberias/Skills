@@ -2,7 +2,7 @@
 
 Result in section "3 Dependencies" of `artifacts/security-report.md`. The numbers for `--vulnerable`, `--deprecated`, and `--outdated` are already in the inventory. This phase covers everything that command does not see, and the origin of the findings.
 
-Contents: A NuGet in depth, B legacy projects with `packages.config`, C shipped binaries, D native components, E npm, F other ecosystems (Python, Java, Go, Rust, Ruby, PHP, containers), G supply chain hardening proposals.
+Contents: A NuGet in depth, B legacy projects with `packages.config`, C shipped binaries, D native components, E npm, yarn, pnpm, F other ecosystems (Python, Java, Go, Rust, Ruby, PHP, containers), G supply chain hardening proposals.
 
 ## A. NuGet in depth (active for .NET)
 
@@ -50,14 +50,21 @@ Native parsers are the typical source of memory bugs. For each of the following 
 
 Table: component, version in the repo, known advisories with source, recommendation (update, monitor, nothing needed).
 
-## E. npm (active for `package.json` with lockfile)
+## E. npm, yarn, pnpm (active for `package.json` with lockfile)
 
-Work in the manifest's folder. Install nothing, do not change the lockfile:
+Work in the manifest's folder (in monorepos at the workspace root). Use the package manager that matches the lockfile. Install nothing, do not change the lockfile:
 
-```powershell
-npm audit --package-lock-only --audit-level=low 2>&1 | Hide-Secrets
-npm outdated 2>&1 | Hide-Secrets
-```
+| Lockfile | Audit | Outdated |
+|---|---|---|
+| `package-lock.json` | `npm audit --package-lock-only --audit-level=low` | `npm outdated` |
+| `yarn.lock` (Yarn 1) | `yarn audit --groups dependencies devDependencies` | `yarn outdated` |
+| `yarn.lock` (Yarn 2+, `.yarnrc.yml`) | `yarn npm audit --all --recursive` | `yarn upgrade-interactive` is interactive: use `osv-scanner` or skip, note it |
+| `pnpm-lock.yaml` | `pnpm audit` | `pnpm outdated -r` |
+
+All output through `Hide-Secrets`. Some of these commands need `node_modules` or contact the registry; if one fails without an install, fall back to `osv-scanner` on the lockfile and note it. Separate `dependencies` (shipped in the bundle or server) from `devDependencies` (build only) in the evaluation: a vulnerable dev tool is usually lower severity, unless it runs in CI with secrets.
+
+- **Install scripts:** list packages with `preinstall`, `install`, or `postinstall` scripts (from the lockfile or `node_modules/*/package.json` if present). Check whether `ignore-scripts` is set (`.npmrc`) or pnpm's `onlyBuiltDependencies` / Yarn's `enableScripts` restrict them.
+- **Typosquatting and origin:** flag direct dependencies with names close to well-known packages, very new or barely maintained packages, and packages from git URLs or tarballs instead of the registry.
 
 - Check whether versions in `package.json` and the lockfile match exactly and whether `.npmrc` contains hardening (e.g. `ignore-scripts=true`, `save-exact=true`).
 - **Bundle comparison** if a minified bundle is checked in: copy the folder without `node_modules` to `artifacts/<name>-rebuild`, run `npm ci --ignore-scripts` there, then the build script from `package.json` with output into that folder. Compare the SHA256 of the new bundle with the checked-in one. Identical, different, or not reproducible, each with a short cause (different tool version, timestamps). The checked-in bundle stays untouched.
