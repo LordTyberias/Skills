@@ -1,8 +1,8 @@
 # Phase 1: Inventory
 
-Goal: a read-only report that records the current state of the repo and justifies the selection of check modules. Output: `artifacts/repo-inventory.md`.
+Goal: a read-only report that records the current state of the repo and justifies the selection of check modules. Output: `<work>/repo-inventory.md`.
 
-Rules for this phase: read only (except `artifacts/`), counts without `bin/`, `obj/`, `node_modules/`, `.git/`, `packages/`, `.vs/`, and without local cache or graph folders (e.g. `graphify-out/`). No secret values. All command output through `Hide-Secrets`. If a command fails, note it under "Open points" and move on.
+Rules for this phase: read only (except the work dir), counts without `bin/`, `obj/`, `node_modules/`, `.git/`, `packages/`, `.vs/`, and without local cache or graph folders (e.g. `graphify-out/`). No secret values. All command output through `Hide-Secrets`. If a command fails, note it under "Open points" and move on.
 
 Contents: 1 Overview, 2 Structure, 3 Dependencies, 4 Vulnerability status, 5 Code quality, 6 Patterns, 7 Build and automation, 8 Claude Code environment, closing part.
 
@@ -13,7 +13,7 @@ Contents: 1 Overview, 2 Structure, 3 Dependencies, 4 Vulnerability status, 5 Cod
 - Largest folders (filtered) with file count, MB, and a short classification. Mention local untracked caches, but do not count them.
 - Top 15 file extensions.
 - Lines per language over the **versioned** files (`git ls-files`), physical lines. At least C#, XAML, Razor, JS/TS, Python, C/C++, Java, SQL, PowerShell/Shell, Markdown, other.
-- **Working mode hints** for choosing the mode: branch name with a ticket pattern, number of distinct authors in the last 90 days (`git shortlog -sn --since=90.days HEAD`), organization instead of a personal account, signs of parallel sessions (new commits during the run).
+- **Working mode hints** for the working mode recommendation at stop 2: branch name with a ticket pattern, number of distinct authors in the last 90 days (`git shortlog -sn --since=90.days HEAD`), organization instead of a personal account, signs of parallel sessions (new commits during the run).
 
 ## 2. Structure (for .NET projects)
 

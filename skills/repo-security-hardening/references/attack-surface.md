@@ -1,6 +1,6 @@
 # Phases 6 and 7: Attack surface and planned features
 
-Part 1 (phase 6) checks what is already in the code. Part 2 (phase 7) writes security requirements for what is yet to be built. Results in sections "7 Attack surface" and "8 Requirements for planned features" of `artifacts/security-report.md`.
+Part 1 (phase 6) checks what is already in the code. Part 2 (phase 7) writes security requirements for what is yet to be built. Results in sections "7 Attack surface" and "8 Requirements for planned features" of `<work>/security-report.md`.
 
 Contents: part 1 approach and checklists by feature, part 2 threat model for planned features.
 
@@ -126,4 +126,4 @@ Typical features and what belongs to them (use the parts of the checklist from p
 - **Accounts, sign-in, synchronization:** authentication, session management, token storage, conflict handling, data deletion.
 - **Cross-cutting:** logging without sensitive data, deleting temporary files, storage location and backup flag of the data.
 
-Result per feature as a checklist with IDs. It feeds into `artifacts/proposals/follow-up-tickets.md`. **Creating tickets in the ticket system is not part of this skill** (ground rule 6), at most as a proposal after stop 2.
+Result per feature as a checklist with IDs. It feeds into `<work>/proposals/follow-up-tickets.md`. **Creating tickets in the ticket system is not part of this skill** (ground rule 6), at most as a proposal after stop 2.

@@ -9,8 +9,8 @@
     {
       "name": "auto-effort-picker",
       "source": "./plugins/auto-effort-picker",
-      "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and offers Switch to that level, or sets it by itself in auto mode. For /ticket it judges the loaded YouTrack ticket.",
-      "version": "0.3.1"
+      "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and offers Switch to that level, or sets it by itself in auto mode. For /ticket and /repo-security-hardening it judges the work, then the approved plan for the build.",
+      "version": "0.4.0"
     }
   ]
 }

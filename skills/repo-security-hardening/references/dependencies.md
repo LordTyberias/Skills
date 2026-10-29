@@ -1,6 +1,6 @@
 # Phase 3: Dependencies, binaries, native components
 
-Result in section "3 Dependencies" of `artifacts/security-report.md`. The numbers for `--vulnerable`, `--deprecated`, and `--outdated` are already in the inventory. This phase covers everything that command does not see, and the origin of the findings.
+Result in section "3 Dependencies" of `<work>/security-report.md`. The numbers for `--vulnerable`, `--deprecated`, and `--outdated` are already in the inventory. This phase covers everything that command does not see, and the origin of the findings.
 
 Contents: A NuGet in depth, B legacy projects with `packages.config`, C shipped binaries, D native components, E npm, yarn, pnpm, F other ecosystems (Python, Java, Go, Rust, Ruby, PHP, containers), G supply chain hardening proposals.
 
@@ -17,7 +17,7 @@ Contents: A NuGet in depth, B legacy projects with `packages.config`, C shipped 
 3. **Commercial packages.** Check whether the vendor publishes security notes for newer versions (release notes, security advisories). Use available docs MCPs (e.g. vendor docs) or web research for this.
 4. **Feed credentials.** Private feeds often carry the key in the URL. Research in the vendor docs what the recommended secure storage looks like (e.g. `packageSourceCredentials`, environment variables, credential provider). Document only, change nothing, do not read the user config.
 5. **Unneeded or unusual packages** (e.g. web adapters in a desktop app, reference assemblies in a modern project): check by searching the code whether they are used. Unused packages increase the attack surface and belong in the proposals.
-6. **NuGet audit settings.** Check the Microsoft docs for the default of `NuGetAudit` and `NuGetAuditMode` for the target framework, and propose setting both explicitly (mode `all` also covers transitive packages) if not already done. The proposal goes into `artifacts/proposals/Directory.Build.props.snippet`.
+6. **NuGet audit settings.** Check the Microsoft docs for the default of `NuGetAudit` and `NuGetAuditMode` for the target framework, and propose setting both explicitly (mode `all` also covers transitive packages) if not already done. The proposal goes into `<work>/proposals/Directory.Build.props.snippet`.
 7. **Unresolvable targets.** Record platform TFMs that do not resolve on the current OS (iOS, Mac Catalyst on Windows) in the report as "only checkable on the Mac host".
 
 ## B. Legacy projects with `packages.config` (active if present)
@@ -25,7 +25,7 @@ Contents: A NuGet in depth, B legacy projects with `packages.config`, C shipped 
 `dotnet list package` does not support `packages.config`. The packages can still be checked without touching the repo:
 
 1. Read package IDs and versions from the `packages.config` files.
-2. In `artifacts/legacy-audit/<project name>/`, create a throwaway SDK project with `TargetFramework` `net48` that contains exactly these packages as `PackageReference`.
+2. In `<work>/legacy-audit/<project name>/`, create a throwaway SDK project with `TargetFramework` `net48` that contains exactly these packages as `PackageReference`.
 3. Next to it, create a separate `nuget.config` with `<clear />` and only `https://api.nuget.org/v3/index.json`. That way a private feed with a key never shows up in the output.
 4. `dotnet restore` and `dotnet list package --vulnerable --include-transitive` as well as `--deprecated` (always through `Hide-Secrets`).
 5. Result per project. Note in the report whether the project is shipped (side tool, sample code, third-party code).
@@ -67,7 +67,7 @@ All output through `Hide-Secrets`. Some of these commands need `node_modules` or
 - **Typosquatting and origin:** flag direct dependencies with names close to well-known packages, very new or barely maintained packages, and packages from git URLs or tarballs instead of the registry.
 
 - Check whether versions in `package.json` and the lockfile match exactly and whether `.npmrc` contains hardening (e.g. `ignore-scripts=true`, `save-exact=true`).
-- **Bundle comparison** if a minified bundle is checked in: copy the folder without `node_modules` to `artifacts/<name>-rebuild`, run `npm ci --ignore-scripts` there, then the build script from `package.json` with output into that folder. Compare the SHA256 of the new bundle with the checked-in one. Identical, different, or not reproducible, each with a short cause (different tool version, timestamps). The checked-in bundle stays untouched.
+- **Bundle comparison** if a minified bundle is checked in: copy the folder without `node_modules` to `<work>/<name>-rebuild`, run `npm ci --ignore-scripts` there, then the build script from `package.json` with output into that folder. Compare the SHA256 of the new bundle with the checked-in one. Identical, different, or not reproducible, each with a short cause (different tool version, timestamps). The checked-in bundle stays untouched.
 - Whether `npm audit signatures` is feasible without an install; otherwise name the reason.
 
 ## F. Other ecosystems (active per manifest found in the inventory)
@@ -92,7 +92,7 @@ Run the audit tool of each ecosystem in the manifest's folder, output through `H
 
 ## G. Supply chain hardening proposals
 
-Put into `artifacts/proposals/`, where applicable:
+Put into `<work>/proposals/`, where applicable:
 
 - `Directory.Build.props.snippet`: NuGet audit and analyzer settings (details in `static-analysis.md`).
 - A `global.json` proposal if the SDK is not pinned (with a `rollForward` recommendation and a note on CI and developer machines).

@@ -47,6 +47,12 @@ let planWait: number | null = null
 let epicId = ''
 let loaded = new Map<string, string>()
 
+// The prompt is a /repo-security-hardening run: the pick judges the review, the approved plan picks again for the build.
+// The run spans several prompts (stop 1, selection round), so its plan approval waits until it comes or another run starts.
+const SECURITY = /^\/repo-security-hardening\b/i
+let securityRun = false
+const securityText = (args: string) => `A security review of this repository by the repo-security-hardening skill: inventory, dependency and secret scans, static analysis, attack surface review, and a rated findings report. It runs in plan mode until the user approves the selected changes. Judge the review work.${args ? `\nArguments: ${args}` : ''}`
+
 async function pickTicket($: EngineInterface, ticket: string, mine: number) {
   ticketWait = null
   loaded = new Map()
@@ -393,7 +399,9 @@ export const register: Register = on => {
     if (e.origin.kind !== 'composer' && e.origin.kind !== 'bridge') return next(e)
     const text = e.text.trim()
     const isTicket = /^\/ticket\b/i.test(text)
-    if (!text || (text.startsWith('/') && !isTicket)) return next(e)
+    const isSecurity = SECURITY.test(text)
+    if (!text || (text.startsWith('/') && !isTicket && !isSecurity)) return next(e)
+    if (isTicket || isSecurity) securityRun = isSecurity
     gen += 1
     turnLevel = null
     ticketWait = null
@@ -406,7 +414,7 @@ export const register: Register = on => {
     if (b?.phase === 'offer') await setBand($, null).catch(() => undefined)
     // The pick waits for the turn's first request, which carries the level the chat really runs at.
     if (isTicket) ticketWait = planWait = mine
-    else held = { text, mine }
+    else held = { text: isSecurity ? securityText(text.replace(SECURITY, '').trim()) : text, mine }
     return next(e)
   }).catch(($, e, next) => next(e))
 
@@ -475,16 +483,18 @@ export const register: Register = on => {
     return r
   }).catch(($, e, next) => next(e))
 
-  // /ticket: the approved plan sets the level for the build; the ticket's pick covered grilling and planning.
+  // /ticket and /repo-security-hardening: the approved plan sets the level for the build; the first pick covered planning.
   // A rejected plan comes back as an error, so the next ExitPlanMode tries again.
   on('tool.call', { tool: 'ExitPlanMode' }, async ($, e, next) => {
     const r = await next(e)
-    if (off || !enabled || planWait === null || planWait !== gen || e.agentId !== undefined) return r
+    if (off || !enabled || e.agentId !== undefined) return r
+    if (!securityRun && (planWait === null || planWait !== gen)) return r
     if (r.deny || r.isError) return r
     const plan = (r.result as { plan?: string | null } | undefined)?.plan
     if (!plan) return r
-    const mine = planWait
+    const mine = gen
     planWait = null
+    securityRun = false
     const text = `An approved plan to build now, judge the build work:
 ${plan}`
     if (mode === 'auto') await autoAdjust($, text, mine).catch(err => log($, 'plan auto', err))

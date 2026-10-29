@@ -59,12 +59,14 @@ ecosystem (NuGet, npm, yarn, pnpm, Python, Java, Go, Rust, Ruby, PHP, containers
 Semgrep and language-native security linters, secret scan, GitHub settings, Dependabot and
 workflows, an attack surface review (with dedicated checklists for Angular/React SPAs and SSR
 frameworks like Next.js), and a threat model for planned features. It stops once to confirm the plan and any
-tool installs, then runs through and ends with `artifacts/security-report.md` and proposal files.
+tool installs, then runs through and ends with a security report and proposal files.
 
-The repository stays untouched: everything is written to a locally excluded `artifacts/` folder,
-secret values are never printed, and nothing is installed or posted without consent. At the end, a
-multiple-choice round lets you pick which changes are applied (in `report` mode it first asks
-whether to apply anything at all); each selected change becomes its own commit on a separate branch.
+The whole run happens in Claude Code's plan mode, which the skill enters as its first step; without
+plan mode it does not run. The repository stays untouched: everything is written to a work dir
+outside it (`~/security-reviews/<repo>/<date>-<branch>/`), secret values are never printed, and
+nothing is installed or posted without consent. At the end, a multiple-choice round first asks
+whether to apply anything at all, then lets you pick the changes; the plan approval of plan mode
+starts the implementation, and each selected change becomes its own commit on a separate branch.
 If the `grill-with-docs` skill is installed, the round runs through it, and rejected changes can be
 recorded as ADRs. Works
 on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
@@ -73,15 +75,18 @@ on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
 
 | Plugin | Purpose |
 | --- | --- |
-| [auto-effort-picker](plugins/auto-effort-picker) | Picks the effort level each prompt needs before Claude starts. For `/ticket`, it judges the YouTrack ticket once it has loaded. |
+| [auto-effort-picker](plugins/auto-effort-picker) | Picks the effort level each prompt needs before Claude starts. For `/ticket` and `/repo-security-hardening`, it judges the work first and the approved plan again. |
 
 ### auto-effort-picker
 
 Before Claude starts on a prompt, a short Sonnet 5.5 call reads the prompt and picks Low, Medium,
 High, Extra high or Max with four questions, stopping at the first yes: back and forth or simple
 (Low), a hidden mistake would be costly (High), a long, hard and critical hand-off (Extra high),
-everything else (Medium). Slash commands are skipped, except `/ticket`: there the pick waits until
-`mcp__youtrack__get_issue` has returned the ticket and judges the ticket text.
+everything else (Medium). Slash commands are skipped, with two exceptions. For `/ticket` the pick
+waits until `mcp__youtrack__get_issue` has returned the ticket and judges the ticket text. For
+`/repo-security-hardening` it judges the security review itself. In both, the plan approved with
+`ExitPlanMode` is judged again and sets the level for the build; for the security review this holds
+across the answers given at stop 1 and in the selection round.
 
 Commands: `/auto-effort-picker` (status), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
 `/auto-effort-picker off`, `/auto-effort-picker on`.

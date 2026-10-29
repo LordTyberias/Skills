@@ -1,6 +1,6 @@
 # Phases 2 and 5: GitHub, workflows, Dependabot, secret scan
 
-Parts A and C belong to phase 2, part B to phase 5. Results in sections "1 GitHub", "5 Secrets", and "6 CI" of `artifacts/security-report.md`.
+Parts A and C belong to phase 2, part B to phase 5. Results in sections "1 GitHub", "5 Secrets", and "6 CI" of `<work>/security-report.md`.
 
 Contents: A GitHub security status, B secret scan, C workflows and Dependabot.
 
@@ -23,20 +23,20 @@ Always active. The scan has two parts: a targeted check of known locations, and 
 
 ### B1. Tool
 
-Check whether `gitleaks` or `trufflehog` is available locally. If neither is, the choice was already made at stop 1. Possible options: Docker image (if Docker is present), `winget` install, binary from the official release into `artifacts/tools/`, `detect-secrets` via `uvx` (working tree only, no history), or skipping the history scan. Install or download nothing without the consent given there.
+Check whether `gitleaks` or `trufflehog` is available locally. If neither is, the choice was already made at stop 1. Possible options: Docker image (if Docker is present), `winget` install, binary from the official release into `<work>/tools/`, `detect-secrets` via `uvx` (working tree only, no history), or skipping the history scan. Install or download nothing without the consent given there.
 
 ### B2. Configuration
 
-Create `artifacts/gitleaks.toml` (`useDefault = true`) with an allowlist for `bin/`, `obj/`, `node_modules/`, local cache folders, the checked-in minified bundle (false hits), and `.claude/settings.local.json`. Note in the report that this file is deliberately excluded because it is known to possibly contain local credentials.
+Create `<work>/gitleaks.toml` (`useDefault = true`) with an allowlist for `bin/`, `obj/`, `node_modules/`, local cache folders, the checked-in minified bundle (false hits), and `.claude/settings.local.json`. Note in the report that this file is deliberately excluded because it is known to possibly contain local credentials.
 
 ### B3. Run with Docker (example, repo mounted read-only)
 
 ```powershell
 # History
-docker run --rm -v "${PWD}:/repo:ro" -v "${PWD}/artifacts:/out" zricethezav/gitleaks:latest `
+docker run --rm -v "${PWD}:/repo:ro" -v "${work}:/out" zricethezav/gitleaks:latest `
   git /repo --config /out/gitleaks.toml --redact --report-format sarif --report-path /out/gitleaks-history.sarif
 # Working tree including untracked files
-docker run --rm -v "${PWD}:/repo:ro" -v "${PWD}/artifacts:/out" zricethezav/gitleaks:latest `
+docker run --rm -v "${PWD}:/repo:ro" -v "${work}:/out" zricethezav/gitleaks:latest `
   dir /repo --config /out/gitleaks.toml --redact --report-format sarif --report-path /out/gitleaks-worktree.sarif
 ```
 
@@ -70,6 +70,6 @@ If `zizmor` is present or the `uvx` call was allowed at stop 1, run it over the 
 
 1. Check the current GitHub docs (name the source) for how Dependabot is configured for the repo's ecosystem: for NuGet with Central Package Management, with `packages.config`, with a **private feed** (`registries` section, secrets in the Dependabot settings). Whether and how the private feed is reached is often unresolved and belongs in the open points.
 2. Evaluate an existing `.github/dependabot.yml`: ecosystems, directories (does it cover all projects?), schedule, `cooldown`, groups.
-3. Put the proposal into `artifacts/proposals/dependabot.proposed.yml`. Keep the existing configuration (including `cooldown`) and extend it: `github-actions` (only if workflows exist), missing directories, sensible groups (vendor suites, Microsoft packages, test packages, platform packages like MAUI/AndroidX), `ignore` entries for deliberate pins. Without an existing file, it is a new proposal.
+3. Put the proposal into `<work>/proposals/dependabot.proposed.yml`. Keep the existing configuration (including `cooldown`) and extend it: `github-actions` (only if workflows exist), missing directories, sensible groups (vendor suites, Microsoft packages, test packages, platform packages like MAUI/AndroidX), `ignore` entries for deliberate pins. Without an existing file, it is a new proposal.
 4. Note in the report: Dependabot must be enabled in the repo's GitHub settings; only the user can do that. If there is no CI, Dependabot PRs are verified locally with the repo's gate.
-5. Sketch `artifacts/proposals/ci-sast.md`: concept for a PR check with code scanning (CodeQL or Semgrep), depending on part A (license). Concept only, no workflow file in the repo. If the repo deliberately has no CI, phrase the sketch as an option and leave the decision to the team.
+5. Sketch `<work>/proposals/ci-sast.md`: concept for a PR check with code scanning (CodeQL or Semgrep), depending on part A (license). Concept only, no workflow file in the repo. If the repo deliberately has no CI, phrase the sketch as an option and leave the decision to the team.

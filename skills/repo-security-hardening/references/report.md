@@ -4,13 +4,13 @@ The report is what the user reads at the end and carries over into the ticket or
 
 Contents: report structure, severities, findings table, proposal files, ticket comment, final check, chat output.
 
-## Report structure (`artifacts/security-report.md`)
+## Report structure (`<work>/security-report.md`)
 
 You already wrote sections 1 to 8 during the phases. Add at the top and bottom:
 
 ```
 # Security report <repo name>
-As of: <date> · Mode: <report|implement> · Branch: <branch> · HEAD at start/end: <short hash>
+As of: <date> · Branch: <branch> · HEAD at start/end: <short hash>
 
 ## Summary (10 lines)
 ## Findings table
@@ -53,7 +53,7 @@ One row per finding, sorted by severity, with sequential IDs `SEC-001`, `SEC-002
 
 Sort by severity, then by effort (cheap measures with high impact first). Name dependencies between measures (e.g. fix findings first, then lock in the rule as an error).
 
-## Proposal files (`artifacts/proposals/`)
+## Proposal files (`<work>/proposals/`)
 
 Create only what applies:
 
@@ -67,11 +67,11 @@ Create only what applies:
 | `ci-sast.md` | Sketch of a PR check with code scanning |
 | `follow-up-tickets.md` | Proposals for separate tickets including SEC requirements from phase 7 |
 | `changes.md` | List of selectable changes for the selection round at stop 2, see below |
-| `ticket-comment.md` (in the `artifacts/` folder) | Draft, see below |
+| `ticket-comment.md` (in the work dir itself) | Draft, see below |
 
 Each proposal states what it does, what it may cost, and how to verify it. Proposals change nothing in the repo; they are files.
 
-## Selectable changes (`artifacts/proposals/changes.md`)
+## Selectable changes (`<work>/proposals/changes.md`)
 
 Always create this file. It is the basis for the multiple-choice selection round at stop 2 in `SKILL.md`. One row per change that can be applied on its own, sorted by the highest severity it fixes:
 
@@ -85,15 +85,15 @@ Always create this file. It is the basis for the multiple-choice selection round
 - Changes outside the repo (GitHub settings, key rotation, tickets) do not get an ID. List them below the table under "For the user".
 - The "Selected" column stays empty until stop 2.
 
-## Ticket comment (`artifacts/ticket-comment.md`)
+## Ticket comment (`<work>/ticket-comment.md`)
 
 Draft for the ticket belonging to this review, in the ticket's language, at most 25 lines: what was checked, number of findings by severity, the three most important findings, recommended next steps, pointer to the report. **No host names, customer names, paths containing user names, or secrets.** The skill posts nothing itself.
 
 ## Final check
 
-1. Search **all** files under `artifacts/` for secret patterns: the pattern from `Hide-Secrets`, token formats (long Base64 or hex strings, `ghp_`, `sk-`, `AKIA`, `-----BEGIN`), credentials in URLs. Clean up hits and check again. Report the result in the chat in one sentence.
+1. Search **all** files under the work dir for secret patterns: the pattern from `Hide-Secrets`, token formats (long Base64 or hex strings, `ghp_`, `sk-`, `AKIA`, `-----BEGIN`), credentials in URLs. Clean up hits and check again. Report the result in the chat in one sentence.
 2. Compare `git log -3 --oneline` and `git status --short` with the state from phase 0. Name deviations (new commits from a parallel session).
-3. Update `artifacts/security-state.md` (phase 8 done).
+3. Update `<work>/security-state.md` (phase 8 done).
 
 ## Chat output at the end
 
