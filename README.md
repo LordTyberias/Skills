@@ -13,6 +13,7 @@ npx skills add LordTyberias/Skills
 | Skill | Purpose |
 | --- | --- |
 | [review-agents-setup](skills/review-agents-setup/SKILL.md) | Generates a mandatory pre-pull-request review loop tailored to the repository it runs in. |
+| [repo-security-hardening](skills/repo-security-hardening/SKILL.md) | Runs a full security review of a repository in one pass: inventory first, then only the checks that fit, ending in a report with change proposals. |
 
 ### review-agents-setup
 
@@ -48,6 +49,21 @@ Finally the skill anchors the loop as a hard rule in the repository's `CLAUDE.md
 surgically, never rewritten — so the next agent that opens the project cannot skip it: `/review-loop`
 is mandatory before every pull request, the local agents may not be substituted by generic ones, and
 security `critical` / `high` findings can never be waived.
+
+### repo-security-hardening
+
+Run in the repository you want to check. The skill first writes an inventory — languages, projects,
+dependencies, known vulnerabilities, analysis setup, risky code patterns, CI, and installed tools —
+and derives from it which checks are worth running: analyzer measurement, dependency audits per
+ecosystem (NuGet, npm, Python, Java, Go, Rust, Ruby, PHP, containers), shipped binaries, Semgrep and
+language-native security linters, secret scan, GitHub settings, Dependabot and workflows, an attack
+surface review, and a threat model for planned features. It stops once to confirm the plan and any
+tool installs, then runs through and ends with `artifacts/security-report.md` and proposal files.
+
+The repository stays untouched: everything is written to a locally excluded `artifacts/` folder,
+secret values are never printed, and nothing is installed or posted without consent. In `implement`
+mode, approved proposals are applied afterwards as individual commits on a separate branch. Works
+on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
 
 ## Plugins
 
