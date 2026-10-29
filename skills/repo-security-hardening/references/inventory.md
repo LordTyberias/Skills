@@ -97,7 +97,7 @@ Summarize: external input channels (file imports, HTTP, clipboard, serial device
 
 ## 8. Claude Code environment
 
-- Existing files and their purpose: `CLAUDE.md`, `ai-doc/`, `CONTEXT.md`, `.mcp.json`, `.claude/settings.json`, `.claude/agents/`, `.claude/commands/`, `.claude/skills/`, `.claude/hooks/`, `.github/copilot-instructions.md`. Whether versioned or ignored.
+- Existing files and their purpose: `CLAUDE.md`, `ai-doc/`, `GLOSSARY.md` (or the older `CONTEXT.md`), `.mcp.json`, `.claude/settings.json`, `.claude/agents/`, `.claude/commands/`, `.claude/skills/`, `.claude/hooks/`, `.github/copilot-instructions.md`. Whether versioned or ignored.
 - `claude mcp list` (server, transport, status).
 - Installed tools with version, where present: dotnet, git, gh, node, npm, python, pip, uv, uvx, pipx, semgrep, docker, gitleaks, wsl (`wsl --status`), claude. Record commands not found as "not installed".
 

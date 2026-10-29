@@ -113,7 +113,7 @@ Table sorted by severity: ID, location, feature, description, severity, classifi
 
 ## Part 2: Requirements for planned features
 
-Active when roadmap, design, or ADR documents (search in `ai-doc/`, `docs/`, `CONTEXT.md`, plans, and epics) name security-related features not yet built. The goal is to define security **before** implementation: crypto formats and import paths can hardly be secured after the fact.
+Active when roadmap, design, or ADR documents (search in `ai-doc/`, `docs/`, `GLOSSARY.md` or the older `CONTEXT.md`, plans, and epics) name security-related features not yet built. The goal is to define security **before** implementation: crypto formats and import paths can hardly be secured after the fact.
 
 Per feature (epic) a short threat model: attackers, assets, trust boundaries, followed by a list of **verifiable requirements** that fit as acceptance criteria in tickets. Assign IDs in the pattern `SEC-<epic>-NN` (e.g. `SEC-E4-01`).
 
