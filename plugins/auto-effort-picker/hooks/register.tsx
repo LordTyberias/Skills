@@ -297,7 +297,7 @@ function parsePick(text: string): Pick | null {
   }
 }
 
-async function pick($: EngineInterface, text: string, now: Level | ''): Promise<Pick | null> {
+async function pick($: EngineInterface, text: string, now: Level | ''): Promise<Pick | null | 'aborted'> {
   const start = await $.clock.now()
   const messages = await $.session.messages()
   const lastReply = replyEnds(lastAssistantText(messages))
@@ -310,6 +310,11 @@ async function pick($: EngineInterface, text: string, now: Level | ''): Promise<
     timeoutMs: 8_000,
   })
   const ms = (await $.clock.now()) - start
+  // A cancelled turn or a newer prompt aborts the pick: that is no failure to show.
+  if (!r.isAnswered && r.reason === 'aborted') {
+    void log($, 'pick aborted', `after ${ms} ms`)
+    return 'aborted'
+  }
   if (!r.isAnswered) throw new Error(`pick failed after ${ms} ms: ${r.reason}`)
   const p = parsePick(r.text)
   if (p) void log($, 'pick', `${p.level} (${p.why || 'no reason'}) in ${ms} ms`)
@@ -321,6 +326,7 @@ async function pick($: EngineInterface, text: string, now: Level | ''): Promise<
 async function tryPick($: EngineInterface, text: string, now: Level | '') {
   try {
     const p = await pick($, text, now)
+    if (p === 'aborted') return null
     if (p) return p
   } catch (err) {
     await log($, 'pick', err)
@@ -328,20 +334,28 @@ async function tryPick($: EngineInterface, text: string, now: Level | '') {
   const id = nextId++
   // level is unused in the failed band; from carries the level that stays.
   await setBand($, { phase: 'failed', id, level: now || 'medium', from: now, why: '', note: `Pick failed, level stays ${now ? NAMES[now] : 'as it is'}` })
-  void hideLater($, id).catch(err => log($, 'hide', err))
+  hideLater($, id)
   return null
 }
 
-async function hideLater($: EngineInterface, id: number) {
-  await $.clock.sleep(APPLIED_MS)
-  const b = await getBand($)
-  if (b && b.id === id && (b.phase === 'applied' || b.phase === 'failed')) await setBand($, null)
+// A timer of its own: a sleep ends with the dispatch that started it, so a cancelled turn left the band up.
+function hideLater($: EngineInterface, id: number) {
+  try {
+    $.clock.after(APPLIED_MS, () => {
+      void (async () => {
+        const b = await getBand($)
+        if (b && b.id === id && (b.phase === 'applied' || b.phase === 'failed')) await setBand($, null)
+      })().catch(err => log($, 'hide', err))
+    })
+  } catch (err) {
+    void log($, 'hide', err)
+  }
 }
 
 async function showApplied($: EngineInterface, p: { level: Level; why: string }, from: Level | '', note: string) {
   const id = nextId++
   await setBand($, { phase: 'applied', id, level: p.level, from, why: p.why, note })
-  void hideLater($, id).catch(err => log($, 'hide', err))
+  hideLater($, id)
 }
 
 async function withStatus<T>($: EngineInterface, text: string, fn: () => Promise<T>) {
