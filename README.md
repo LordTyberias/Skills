@@ -101,3 +101,7 @@ Install:
 /plugin marketplace add LordTyberias/Skills
 /plugin install auto-effort-picker@lordtyberias-skills
 ```
+
+## License
+
+GPL-3.0-only, see [LICENSE](LICENSE).
