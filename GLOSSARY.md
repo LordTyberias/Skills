@@ -21,3 +21,22 @@ _Avoid_: mode (alone), run mode
 The folder outside the reviewed repo that holds every result of a run: inventory, report,
 progress file, raw data, and proposals.
 _Avoid_: artifacts folder, output folder
+
+### auto-effort-picker
+
+**Picker level**:
+The effort level shown in the app's effort menu, which only the user can move.
+_Avoid_: menu level, setting
+
+**Sent level**:
+The effort level a request actually runs at, which may differ from the picker level.
+_Avoid_: real level, applied level
+
+**Hold**:
+The state in which the plugin puts its chosen level on every request until the picker level moves.
+_Avoid_: override, lock
+
+**Run**:
+One `/ticket` or `/repo-security-hardening` invocation, from its prompt to the pick for the build.
+Questions asked in between belong to the same run.
+_Avoid_: ticket flow, session
