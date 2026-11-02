@@ -1,8 +1,8 @@
 export type Level = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
 
 export type Band = {
-  /** offer: the suggestion and its buttons. applied: one line for a few seconds. info: the Learn more panel, open until closed. */
-  phase: 'offer' | 'applied' | 'info'
+  /** applied: one line for a few seconds. failed: the pick failed, one line for a few seconds. info: the Learn more panel, open until closed. */
+  phase: 'applied' | 'failed' | 'info'
   /** Changes with every new band, so an old timer never clears a newer one. */
   id: number
   /** The level the framework picked. */
@@ -11,7 +11,7 @@ export type Band = {
   from: Level | ''
   /** One short reason, from the framework. */
   why: string
-  /** A line under the buttons: an error, or how the level was set. */
+  /** Why the mod sets the level on each request, or the failed pick's message; empty when the setting changed. */
   note: string
 }
 

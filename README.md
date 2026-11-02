@@ -86,9 +86,12 @@ everything else (Medium). Slash commands are skipped, with two exceptions. For `
 waits until `mcp__youtrack__get_issue` has returned the ticket and judges the ticket text. For
 `/repo-security-hardening` it judges the security review itself. In both, the plan approved with
 `ExitPlanMode` is judged again and sets the level for the build; for the security review this holds
-across the answers given at stop 1 and in the selection round.
+across the answers given at stop 1 and in the selection round. Short approvals (yes, ok, go, option 2)
+keep the level without a pick. In suggest mode a dialog asks before switching; in auto mode the level
+is set by itself.
 
-Commands: `/auto-effort-picker` (status), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
+Commands: `/auto-effort-picker` or `/auto-effort-picker status` (picker level, sent level, hold),
+`/auto-effort-picker reset` (release the hold), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
 `/auto-effort-picker off`, `/auto-effort-picker on`.
 
 Install:
