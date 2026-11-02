@@ -92,7 +92,7 @@ keep the level without a pick. In suggest mode a dialog asks before switching; i
 is set by itself.
 
 Commands: `/auto-effort-picker` or `/auto-effort-picker status` (picker level, sent level, hold),
-`/auto-effort-picker reset` (release the hold), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
+`/auto-effort-picker reset` (release the hold), `/auto-effort-picker log` (the plugin's log), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
 `/auto-effort-picker off`, `/auto-effort-picker on`.
 
 What the plugin changes and writes:
@@ -100,8 +100,8 @@ What the plugin changes and writes:
 - **Settings and environment:** none. It changes no setting, no environment variable and no file
   that other tools run or obey. The level it picks is put only on the `effort` field of the main
   chat's own requests.
-- **Files it writes:** only its own log, `~/.claude/mods-logs/auto-effort-picker.log`: picks, sent
-  levels and errors (the last 20 KB). No other tool reads or runs it.
+- **Files it writes:** none. Its log (picks, sent levels and errors, the last 20 KB) is kept in the
+  plugin's own store in Claude Code and shown by `/auto-effort-picker log`.
 - **Files it reads:** `~/.claude/mods/switches.json`, the `/mods` switchboard, to know whether it is turned off.
 
 What its hooks do:

@@ -24,7 +24,6 @@ const AGREE = /^(ja|jo|yes|yep|ok(ay)?|go|weiter|passt|genau|do it|go on|continu
 const isAgree = (text: string) => text.length <= 3 || AGREE.test(text)
 
 // Module variables reset on a reload; the band and the override live in $.state.
-let home = ''
 let enabled = true
 let mode: Mode = 'suggest'
 // Bumped on every prompt, so a slow pick for an older prompt is dropped.
@@ -76,7 +75,7 @@ async function pickTicket($: EngineInterface, ticket: string) {
 }
 
 // plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
-// shortcut: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
+// shortcut: home guessed from the path, no engine API gives it; a root outside the user folder reads no switchboard.
 function homeOf($: EngineInterface) {
   const r = $.plugin.root
   const m = /^(.*?)[\\/]\.claude[\\/]/.exec(r) ?? /^(.*?[\\/](?:Users|home)[\\/][^\\/]+)/i.exec(r)
@@ -107,15 +106,17 @@ async function readSwitch($: EngineInterface) {
   redraw($)
 }
 
-// One write at a time: each line reads and rewrites the file, so parallel writers would drop lines.
+// The log lives in the plugin's own store (no file), shown by /auto-effort-picker log.
+// One write at a time: each line reads and rewrites the entry, so parallel writers would drop lines.
+const LOG_KEY = 'log'
+const LOG_CHARS = 20_000
 let logQueue: Promise<void> = Promise.resolve()
 function log($: EngineInterface, what: string, err: unknown) {
   logQueue = logQueue.then(async () => {
     try {
-      const path = `${home}/.claude/mods-logs/auto-effort-picker.log`
-      const old = (await $.fs.exists(path)) ? String(await $.fs.read(path)) : ''
+      const old = await $.store.get(LOG_KEY)
       const msg = err instanceof Error ? err.message : String(err)
-      await $.fs.write(path, `${old.slice(-20_000)}${new Date(await $.clock.now()).toISOString()} ${what}: ${msg}\n`)
+      await $.store.set(LOG_KEY, `${typeof old === 'string' ? old.slice(-LOG_CHARS) : ''}${new Date(await $.clock.now()).toISOString()} ${what}: ${msg}\n`)
     } catch {
       // Nowhere left to report it.
     }
@@ -370,12 +371,11 @@ function release($: EngineInterface) {
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    home = homeOf($)
     resetRun()
     await $.command.register({
       name: 'auto-effort-picker',
-      description: 'Auto Effort Picker. auto: set effort by itself. suggest: ask before switching. status, reset, off or on',
-      argumentHint: '[auto|suggest|status|reset|off|on]',
+      description: 'Auto Effort Picker. auto: set effort by itself. suggest: ask before switching. status, reset, log, off or on',
+      argumentHint: '[auto|suggest|status|reset|log|off|on]',
     })
     enabled = (await $.store.get('enabled')) !== false
     mode = (await $.store.get('mode')) === 'auto' ? 'auto' : 'suggest'
@@ -553,7 +553,12 @@ ${plan}`
       release($)
       return { text: 'Auto Effort Picker: hold released, the chat follows the effort menu again.' }
     }
-    if (arg !== '' && arg !== 'status') return { text: `Unknown argument "${arg}". Allowed: auto, suggest, status, reset, off, on.` }
+    if (arg === 'log') {
+      await logQueue
+      const text = await $.store.get(LOG_KEY)
+      return { text: typeof text === 'string' && text ? `Auto Effort Picker log (newest last):\n${text.slice(-4_000)}` : 'Auto Effort Picker log is empty.' }
+    }
+    if (arg !== '' && arg !== 'status') return { text: `Unknown argument "${arg}". Allowed: auto, suggest, status, reset, log, off, on.` }
     const picker = asLevel(lastEffort) || (await currentLevel($))
     const sent = lastWant ? asLevel(lastWant) : picker
     return {
@@ -561,7 +566,7 @@ ${plan}`
         `Auto Effort Picker is ${enabled ? 'on' : 'off'}, mode: ${mode}.`,
         `Picker level: ${picker ? NAMES[picker] : 'unknown yet'}. Sent level: ${sent ? NAMES[sent] : 'unknown yet'}.`,
         `Hold: ${hold ? `${NAMES[hold.level]} until the menu moves away from ${hold.base || 'its level'}` : 'none'}.`,
-        'Type /auto-effort-picker auto, suggest, status, reset, off or on.',
+        'Type /auto-effort-picker auto, suggest, status, reset, log, off or on.',
       ].join('\n'),
     }
   })
