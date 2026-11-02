@@ -11,6 +11,7 @@ const LEVELS: readonly Level[] = ['low', 'medium', 'high', 'xhigh', 'max']
 const NAMES: Record<Level, string> = { low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Extra high', max: 'Max' }
 
 const APPLIED_MS = 15000
+const PICK_TIMEOUT_MS = 8_000
 const ACCENT = '#d97757'
 const GOOD = '#16a34a'
 const BAD = '#dc2626'
@@ -307,11 +308,12 @@ async function pick($: EngineInterface, text: string, now: Level | ''): Promise<
     prompt: pickPrompt(text.slice(0, 40_000), lastReply, now),
     maxTokens: 200,
     effort: 'low',
-    timeoutMs: 8_000,
+    timeoutMs: PICK_TIMEOUT_MS,
   })
   const ms = (await $.clock.now()) - start
   // A cancelled turn or a newer prompt aborts the pick: that is no failure to show.
-  if (!r.isAnswered && r.reason === 'aborted') {
+  // The engine reports the timeout as aborted too, so an abort at the limit is a failure.
+  if (!r.isAnswered && r.reason === 'aborted' && ms < PICK_TIMEOUT_MS) {
     void log($, 'pick aborted', `after ${ms} ms`)
     return 'aborted'
   }
@@ -324,16 +326,18 @@ async function pick($: EngineInterface, text: string, now: Level | ''): Promise<
 
 // A failed or unreadable pick keeps the level and says so in the band.
 async function tryPick($: EngineInterface, text: string, now: Level | '') {
+  let what = 'Pick failed'
   try {
     const p = await pick($, text, now)
     if (p === 'aborted') return null
     if (p) return p
   } catch (err) {
     await log($, 'pick', err)
+    if (err instanceof Error && err.message.endsWith(': aborted')) what = 'Pick timed out'
   }
   const id = nextId++
   // level is unused in the failed band; from carries the level that stays.
-  await setBand($, { phase: 'failed', id, level: now || 'medium', from: now, why: '', note: `Pick failed, level stays ${now ? NAMES[now] : 'as it is'}` })
+  await setBand($, { phase: 'failed', id, level: now || 'medium', from: now, why: '', note: `${what}, level stays ${now ? NAMES[now] : 'as it is'}` })
   hideLater($, id)
   return null
 }
