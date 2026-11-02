@@ -114,6 +114,8 @@ What its hooks do:
 - `command.run`: answers `/auto-effort-picker`. `ui.render` and `ui.press`: draw the band above the
   prompt and the footer label.
 
+Links: [Documentation](https://github.com/LordTyberias/Skills#auto-effort-picker) · [Support](https://github.com/LordTyberias/Skills/issues) · [Privacy](plugins/auto-effort-picker/PRIVACY.md)
+
 Install:
 
 ```
