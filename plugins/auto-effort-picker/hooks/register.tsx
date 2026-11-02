@@ -75,22 +75,6 @@ async function pickTicket($: EngineInterface, ticket: string) {
   else await suggest($, text, gen).catch(err => log($, 'ticket suggest', err))
 }
 
-// The status line script reads "<level sent> <picker level>" from one file per session.
-// shortcut: $.fs cannot delete, so an ended session leaves an empty file behind; clean the folder by hand if it grows.
-let lastStatus = ''
-const statusPath = (id: string) => `${home}/.claude/mods-state/auto-effort-picker/${id}.json`
-
-async function writeStatus($: EngineInterface, sent: string, picker: string) {
-  const line = `${sent} ${picker}`
-  if (line === lastStatus) return
-  try {
-    await $.fs.write(statusPath(await $.session.id()), JSON.stringify({ line }))
-    lastStatus = line
-  } catch (err) {
-    await log($, 'status file', err)
-  }
-}
-
 // plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
 // shortcut: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
 function homeOf($: EngineInterface) {
@@ -119,8 +103,6 @@ async function readSwitch($: EngineInterface) {
   off = now
   if (off) {
     release($)
-    // turn.step skips writeStatus while off, so the status line would keep the old sent level.
-    if (lastEffort) await writeStatus($, lastEffort, lastEffort)
   }
   redraw($)
 }
@@ -464,7 +446,6 @@ export const register: Register = on => {
       value = enabled && hold ? hold.level : null
     }
     const want = turnLevel ?? (enabled ? (value ?? null) : null)
-    await writeStatus($, want ?? e.effort, e.effort)
     if (!want || want === e.effort) {
       lastWant = ''
       return yield* next(e)
@@ -541,12 +522,6 @@ ${plan}`
       switchTimer = null
     }
     resetRun()
-    try {
-      await $.fs.write(statusPath(e.sessionId), '{}')
-    } catch (err) {
-      await log($, 'status file', err)
-    }
-    lastStatus = ''
     return next(e)
   })
 
