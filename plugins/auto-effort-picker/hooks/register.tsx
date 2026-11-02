@@ -316,8 +316,6 @@ async function withStatus<T>($: EngineInterface, text: string, fn: () => Promise
   try {
     return await fn()
   } finally {
-    // The same slot holds the "(auto)" entry: the next request sets it again.
-    shownAuto = ''
     try {
       await $.ui.status(undefined)
     } catch {
@@ -364,24 +362,10 @@ async function autoAdjust($: EngineInterface, text: string, mine: number) {
   await showApplied($, { level: p.level, why: p.why }, now, note)
 }
 
-// A status line entry while the mod sends another level than the menu shows, e.g. "Effort High (auto)".
-let shownAuto = ''
-function showAuto($: EngineInterface, level: Level | null) {
-  const text = level ? `Effort ${NAMES[level]} (auto)` : ''
-  if (text === shownAuto) return
-  shownAuto = text
-  try {
-    void $.ui.status(text || undefined)
-  } catch {
-    // The status line is a nicety.
-  }
-}
-
 function release($: EngineInterface) {
   hold = null
   turnLevel = null
   lastWant = ''
-  showAuto($, null)
   void $.state.set(OVERRIDE, null).then(() => redraw($)).catch(() => undefined)
 }
 
@@ -462,7 +446,6 @@ export const register: Register = on => {
       value = enabled && hold ? hold.level : null
     }
     const want = turnLevel ?? (enabled ? (value ?? null) : null)
-    showAuto($, want && want !== e.effort ? want : null)
     if (!want || want === e.effort) {
       lastWant = ''
       return yield* next(e)
@@ -605,7 +588,7 @@ ${plan}`
     if (off || !enabled) return next(e)
     const { value } = await $.state.get(OVERRIDE)
     if (!value) return next(e)
-    const label = `Effort ${SHORT[value]}`
+    const label = `${SHORT[value]} (auto)`
     if (e.surface === 'desktop' || e.surface === 'vscode') {
       const { Text } = $.ui.resolve(e)
       return <Text color="#d97757">{label}</Text>
@@ -661,7 +644,7 @@ ${plan}`
           </Text>
           <Text dimColor>The mod sets the level on each message before it leaves your computer.</Text>
           <Text dimColor>The effort menu next to the model name still shows {was}. Only you can move that menu: the app does not let a chat change its own menu.</Text>
-          <Text dimColor>To check the sent level, look for the orange "Effort {SHORT[b.level]}" label at the bottom, or type /auto-effort-picker status.</Text>
+          <Text dimColor>To check the sent level, look for the orange "{SHORT[b.level]} (auto)" label at the bottom, or type /auto-effort-picker status.</Text>
           <Text dimColor>If you move the menu yourself, the mod follows the menu again.</Text>
           <Box flexDirection="row" gap={1}>
             <Button key="info-close" label="Got it" role="dismiss" onPress={noop} />
