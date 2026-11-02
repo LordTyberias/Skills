@@ -316,6 +316,8 @@ async function withStatus<T>($: EngineInterface, text: string, fn: () => Promise
   try {
     return await fn()
   } finally {
+    // The same slot holds the "(auto)" entry: the next request sets it again.
+    shownAuto = ''
     try {
       await $.ui.status(undefined)
     } catch {
@@ -362,10 +364,24 @@ async function autoAdjust($: EngineInterface, text: string, mine: number) {
   await showApplied($, { level: p.level, why: p.why }, now, note)
 }
 
+// A status line entry while the mod sends another level than the menu shows, e.g. "Effort High (auto)".
+let shownAuto = ''
+function showAuto($: EngineInterface, level: Level | null) {
+  const text = level ? `Effort ${NAMES[level]} (auto)` : ''
+  if (text === shownAuto) return
+  shownAuto = text
+  try {
+    void $.ui.status(text || undefined)
+  } catch {
+    // The status line is a nicety.
+  }
+}
+
 function release($: EngineInterface) {
   hold = null
   turnLevel = null
   lastWant = ''
+  showAuto($, null)
   void $.state.set(OVERRIDE, null).then(() => redraw($)).catch(() => undefined)
 }
 
@@ -446,6 +462,7 @@ export const register: Register = on => {
       value = enabled && hold ? hold.level : null
     }
     const want = turnLevel ?? (enabled ? (value ?? null) : null)
+    showAuto($, want && want !== e.effort ? want : null)
     if (!want || want === e.effort) {
       lastWant = ''
       return yield* next(e)
