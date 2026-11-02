@@ -10,7 +10,7 @@
       "name": "auto-effort-picker",
       "source": "./plugins/auto-effort-picker",
       "description": "Picks the effort level each prompt needs before Claude starts. A short model call reads the prompt and chooses Low, Medium, High, Extra high or Max with a four-question framework; suggest mode asks before switching, auto mode switches by itself. Planning runs are judged twice: once for the planning and once for the approved plan.",
-      "version": "0.9.7"
+      "version": "0.9.8"
     }
   ]
 }

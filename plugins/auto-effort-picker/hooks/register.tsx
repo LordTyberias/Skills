@@ -21,7 +21,7 @@ type Pick = { level: Level | 'keep'; why: string }
 
 // Approvals and answers go on with earlier work: they keep the level without a pick.
 const AGREE = /^(ja|jo|yes|yep|ok(ay)?|go|weiter|passt|genau|do it|go on|continue|mach (das|weiter|es)|option \d+|\d+)[\s.!]*$/i
-const isAgree = (text: string) => text.length <= 3 || AGREE.test(text)
+const isAgree = (text: string) => AGREE.test(text)
 
 // Module variables reset on a reload; the band and the override live in $.state.
 let enabled = true
@@ -146,21 +146,13 @@ function asLevel(v: unknown): Level | '' {
   return (LEVELS as readonly string[]).includes(t) ? (t as Level) : ''
 }
 
-// The level the chat runs at now: the last request's.
-async function currentLevel(_$: EngineInterface): Promise<Level | ''> {
-  return seen
-}
-
 // The app keeps its effort menu to the person, so this mod puts the level on every request until the person
 // moves the picker. No setting is changed and no /effort command is run.
-const HOLD_NOTE = 'the app lets no mod change its effort menu'
 async function applyLevel($: EngineInterface, level: Level) {
   turnLevel = level
-  const note = HOLD_NOTE
   hold = { level, base: lastEffort }
   await $.state.set(OVERRIDE, level)
   redraw($)
-  return note
 }
 
 function redraw($: EngineInterface) {
@@ -301,9 +293,9 @@ function hideLater($: EngineInterface, id: number) {
   }
 }
 
-async function showApplied($: EngineInterface, p: { level: Level; why: string }, from: Level | '', note: string) {
+async function showApplied($: EngineInterface, p: { level: Level; why: string }, from: Level | '') {
   const id = nextId++
-  await setBand($, { phase: 'applied', id, level: p.level, from, why: p.why, note })
+  await setBand($, { phase: 'applied', id, level: p.level, from, why: p.why, note: '' })
   hideLater($, id)
 }
 
@@ -326,7 +318,7 @@ async function withStatus<T>($: EngineInterface, text: string, fn: () => Promise
 
 // Suggest mode: pick before the prompt goes in and, when the level differs, ask in a dialog before Claude starts.
 async function suggest($: EngineInterface, text: string, mine: number) {
-  const now = await currentLevel($)
+  const now = seen
   const p = await withStatus($, 'checking effort…', () => tryPick($, text, now))
   if (!p || p.level === 'keep' || mine !== gen || p.level === now) return
   const level = p.level
@@ -348,18 +340,18 @@ async function suggest($: EngineInterface, text: string, mine: number) {
     mode = 'auto'
     await $.store.set('mode', mode)
   }
-  const note = await applyLevel($, level)
-  await showApplied($, { level, why: p.why }, now, note)
+  await applyLevel($, level)
+  await showApplied($, { level, why: p.why }, now)
 }
 
 // Auto mode: pick before the prompt goes in, so the first request already runs at the right level.
 async function autoAdjust($: EngineInterface, text: string, mine: number) {
-  const now = await currentLevel($)
+  const now = seen
   const p = await withStatus($, 'picking effort…', () => tryPick($, text, now))
   // A pick equal to the picker needs nothing held: the menu stays in charge.
   if (!p || p.level === 'keep' || mine !== gen || p.level === now) return
-  const note = await applyLevel($, p.level)
-  await showApplied($, { level: p.level, why: p.why }, now, note)
+  await applyLevel($, p.level)
+  await showApplied($, { level: p.level, why: p.why }, now)
 }
 
 function release($: EngineInterface) {
@@ -522,6 +514,8 @@ ${plan}`
       switchTimer = null
     }
     resetRun()
+    // A new conversation (/clear) starts without the old hold.
+    release($)
     return next(e)
   })
 
@@ -559,7 +553,7 @@ ${plan}`
       return { text: typeof text === 'string' && text ? `Auto Effort Picker log (newest last):\n${text.slice(-4_000)}` : 'Auto Effort Picker log is empty.' }
     }
     if (arg !== '' && arg !== 'status') return { text: `Unknown argument "${arg}". Allowed: auto, suggest, status, reset, log, off, on.` }
-    const picker = asLevel(lastEffort) || (await currentLevel($))
+    const picker = asLevel(lastEffort) || seen
     const sent = lastWant ? asLevel(lastWant) : picker
     return {
       text: [
