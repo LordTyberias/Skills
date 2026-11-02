@@ -85,8 +85,9 @@ High, Extra high or Max with four questions, stopping at the first yes: back and
 everything else (Medium). Slash commands are skipped, with two exceptions. For `/ticket` the pick
 waits until `mcp__youtrack__get_issue` has returned the ticket and judges the ticket text. For
 `/repo-security-hardening` it judges the security review itself. In both, the plan approved with
-`ExitPlanMode` is judged again and sets the level for the build; for the security review this holds
-across the answers given at stop 1 and in the selection round. Short approvals (yes, ok, go, option 2)
+`ExitPlanMode` is judged again and sets the level for the build. Such a run holds across the questions
+and answers in between (for the security review: stop 1 and the selection round) and ends with the
+next run or a new conversation. Any other slash command releases a level the plugin holds. Short approvals (yes, ok, go, option 2)
 keep the level without a pick. In suggest mode a dialog asks before switching; in auto mode the level
 is set by itself.
 

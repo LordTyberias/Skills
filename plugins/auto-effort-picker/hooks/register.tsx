@@ -95,7 +95,7 @@ async function writeStatus($: EngineInterface, sent: string, picker: string) {
 }
 
 // plugin.root may carry backslashes on Windows, and a directory install lies outside ~/.claude.
-// ponytail: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
+// shortcut: home guessed from the path, no engine API gives it; a root outside the user folder logs beside the plugin.
 function homeOf($: EngineInterface) {
   const r = $.plugin.root
   const m = /^(.*?)[\\/]\.claude[\\/]/.exec(r) ?? /^(.*?[\\/](?:Users|home)[\\/][^\\/]+)/i.exec(r)
@@ -121,8 +121,9 @@ async function readSwitch($: EngineInterface) {
   if (now === off) return
   off = now
   if (off) {
-    turnLevel = null
-    hold = null
+    release($)
+    // turn.step skips writeStatus while off, so the status line would keep the old sent level.
+    if (lastEffort) await writeStatus($, lastEffort, lastEffort)
   }
   redraw($)
 }
@@ -165,15 +166,15 @@ function asLevel(v: unknown): Level | '' {
   return (LEVELS as readonly string[]).includes(t) ? (t as Level) : ''
 }
 
-function isEffortRow(r: ConfigRow) {
-  if (r.kind !== 'choice') return false
-  const matches = (r.options ?? []).filter(o => asLevel(o)).length
-  return (/effort/i.test(`${r.key} ${r.label}`) && matches > 0) || matches >= 3
+const levelOptions = (r: ConfigRow) => (r.kind === 'choice' ? (r.options ?? []).filter(o => asLevel(o)).length : 0)
+
+// A row named effort wins; a choice row with three or more levels is only the fallback.
+function effortRow(rows: readonly ConfigRow[]) {
+  return rows.find(r => /effort/i.test(`${r.key} ${r.label}`) && levelOptions(r) > 0) ?? rows.find(r => levelOptions(r) >= 3) ?? null
 }
 
 async function findRow($: EngineInterface) {
-  const rows = await $.config.list()
-  return rows.find(isEffortRow) ?? null
+  return effortRow(await $.config.list())
 }
 
 // The level the chat runs at now: the last request's, else the setting's.
@@ -392,11 +393,8 @@ async function suggest($: EngineInterface, text: string, mine: number) {
 async function autoAdjust($: EngineInterface, text: string, mine: number) {
   const now = await currentLevel($)
   const p = await withStatus($, 'picking effort…', () => tryPick($, text, now))
-  if (!p || p.level === 'keep' || mine !== gen) return
-  if (p.level === now) {
-    turnLevel = p.level
-    return
-  }
+  // A pick equal to the picker needs nothing held: the menu stays in charge.
+  if (!p || p.level === 'keep' || mine !== gen || p.level === now) return
   const note = await applyLevel($, p.level)
   await showApplied($, { level: p.level, why: p.why }, now, note)
 }
@@ -405,6 +403,7 @@ function release($: EngineInterface) {
   hold = null
   turnLevel = null
   setBase = null
+  lastWant = ''
   void $.state.set(OVERRIDE, null).then(() => redraw($)).catch(() => undefined)
 }
 
@@ -426,7 +425,7 @@ export const register: Register = on => {
     void (async () => {
       const rows = await $.config.list()
       await log($, 'config rows', rows.map(r => `${r.key}|${r.label}|${r.kind}|${(r.options ?? []).join(',')}`).join('; '))
-      const row = rows.find(isEffortRow) ?? null
+      const row = effortRow(rows)
       rowKey = row?.key ?? ''
       await log($, 'effort row', row ? `${row.key} = ${String(row.value)} [${(row.options ?? []).join(', ')}]${row.isLocked ? ' locked' : ''}` : 'none found')
     })().catch(err => log($, 'find row', err))
@@ -441,9 +440,9 @@ export const register: Register = on => {
     const isSecurity = SECURITY.test(text)
     held = null
     if (!text) return next(e)
-    // Other slash commands are not picked, and do not inherit an old hold.
+    // Other slash commands are not picked, and do not inherit an old hold. The mod's own command handles the hold itself.
     if (text.startsWith('/') && !isTicket && !isSecurity) {
-      if (hold || turnLevel) release($)
+      if ((hold || turnLevel) && !/^\/auto-effort-picker\b/i.test(text)) release($)
       return next(e)
     }
     gen += 1
@@ -507,7 +506,8 @@ export const register: Register = on => {
     }
     if (want !== lastWant) {
       lastWant = want
-      void log($, 'request', `session ${await $.session.id()} #${e.index}: ${e.effort} -> ${want}`)
+      const sid = await $.session.id().catch(() => '?')
+      void log($, 'request', `session ${sid} #${e.index}: ${e.effort} -> ${want}`)
     }
     return yield* next({ ...e, effort: want })
   })
@@ -570,8 +570,12 @@ ${plan}`
   }).catch(($, e, next) => next(e))
 
   on('session.end', async ($, e, next) => {
-    switchTimer?.cancel()
-    switchTimer = null
+    // /clear and resume go on in this process without a session.start: the poll stays, the run ends.
+    if (e.reason !== 'clear' && e.reason !== 'resume') {
+      switchTimer?.cancel()
+      switchTimer = null
+    }
+    resetRun()
     try {
       await $.fs.write(statusPath(e.sessionId), '{}')
     } catch (err) {
@@ -698,7 +702,7 @@ ${plan}`
             <>
               <Text dimColor>The mod sets the level on each message before it leaves your computer ({b.note}).</Text>
               <Text dimColor>The effort menu next to the model name still shows {was}. Only you can move that menu: the app does not let a chat change its own menu.</Text>
-              <Text dimColor>To check the real level, look for the orange "Effort {SHORT[b.level]}" label at the bottom, or type /auto-effort-picker status.</Text>
+              <Text dimColor>To check the sent level, look for the orange "Effort {SHORT[b.level]}" label at the bottom, or type /auto-effort-picker status.</Text>
               <Text dimColor>If you move the menu yourself, the mod follows the menu again.</Text>
             </>
           ) : (
