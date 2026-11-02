@@ -1,4 +1,4 @@
-import type { ConfigRow, EngineInterface, Register, SessionMessage } from 'claude-code'
+import type { EngineInterface, Register, SessionMessage } from 'claude-code'
 
 import type { Band, Level } from '../types'
 
@@ -34,10 +34,6 @@ let nextId = 1
 let seen: Level | '' = ''
 // The level for the rest of the running turn, set by a Switch or by auto mode.
 let turnLevel: Level | null = null
-// After the effort setting was changed: the level it now holds, released once the picker moves away from it.
-let setBase: { level: string; isSeen: boolean } | null = null
-// The /config row that holds the effort setting, found at session start.
-let rowKey = ''
 // The level the mod puts on requests, and the picker level it saw when it took over.
 let hold: { level: Level; base: string } | null = null
 let lastEffort = ''
@@ -167,51 +163,17 @@ function asLevel(v: unknown): Level | '' {
   return (LEVELS as readonly string[]).includes(t) ? (t as Level) : ''
 }
 
-const levelOptions = (r: ConfigRow) => (r.kind === 'choice' ? (r.options ?? []).filter(o => asLevel(o)).length : 0)
-
-// A row named effort wins; a choice row with three or more levels is only the fallback.
-function effortRow(rows: readonly ConfigRow[]) {
-  return rows.find(r => /effort/i.test(`${r.key} ${r.label}`) && levelOptions(r) > 0) ?? rows.find(r => levelOptions(r) >= 3) ?? null
+// The level the chat runs at now: the last request's.
+async function currentLevel(_$: EngineInterface): Promise<Level | ''> {
+  return seen
 }
 
-async function findRow($: EngineInterface) {
-  return effortRow(await $.config.list())
-}
-
-// The level the chat runs at now: the last request's, else the setting's.
-async function currentLevel($: EngineInterface): Promise<Level | ''> {
-  if (seen) return seen
-  try {
-    const row = await findRow($)
-    return row ? asLevel(row.value) : ''
-  } catch {
-    return ''
-  }
-}
-
-// Sets the chat's effort setting, or, when no setting takes it, has this mod put the level on every request
-// until the person moves the picker. No /effort command is run. Returns a note only on the fallback path.
+// The app keeps its effort menu to the person, so this mod puts the level on every request until the person
+// moves the picker. No setting is changed and no /effort command is run.
+const HOLD_NOTE = 'the app lets no mod change its effort menu'
 async function applyLevel($: EngineInterface, level: Level) {
   turnLevel = level
-  let note = ''
-  try {
-    const row = await findRow($)
-    const option = row?.options?.find(o => norm(o) === level)
-    if (row && option && !row.isLocked) {
-      const r = await $.config.set({ key: row.key, value: option })
-      if (!r.deny) {
-        setBase = { level, isSeen: false }
-        await $.state.set(OVERRIDE, null)
-        return ''
-      }
-      note = r.deny
-    } else {
-      note = row ? (row.isLocked ? 'the effort setting is locked' : 'the effort setting has no such level') : 'no effort setting found'
-    }
-  } catch (err) {
-    note = err instanceof Error ? err.message : String(err)
-  }
-  await log($, 'set effort', note)
+  const note = HOLD_NOTE
   hold = { level, base: lastEffort }
   await $.state.set(OVERRIDE, level)
   redraw($)
@@ -420,7 +382,6 @@ async function autoAdjust($: EngineInterface, text: string, mine: number) {
 function release($: EngineInterface) {
   hold = null
   turnLevel = null
-  setBase = null
   lastWant = ''
   void $.state.set(OVERRIDE, null).then(() => redraw($)).catch(() => undefined)
 }
@@ -440,13 +401,6 @@ export const register: Register = on => {
     switchTimer = $.clock.every(3000, () => {
       void readSwitch($).catch(() => undefined)
     })
-    void (async () => {
-      const rows = await $.config.list()
-      await log($, 'config rows', rows.map(r => `${r.key}|${r.label}|${r.kind}|${(r.options ?? []).join(',')}`).join('; '))
-      const row = effortRow(rows)
-      rowKey = row?.key ?? ''
-      await log($, 'effort row', row ? `${row.key} = ${String(row.value)} [${(row.options ?? []).join(', ')}]${row.isLocked ? ' locked' : ''}` : 'none found')
-    })().catch(err => log($, 'find row', err))
     return next(e)
   })
 
@@ -493,13 +447,6 @@ export const register: Register = on => {
       hold = null
       turnLevel = null
     }
-    if (setBase) {
-      if (norm(e.effort) === setBase.level) setBase.isSeen = true
-      else if (setBase.isSeen) {
-        setBase = null
-        turnLevel = null
-      }
-    }
     let value: Level | null = enabled && hold ? hold.level : null
     if (!hold && (await $.state.get(OVERRIDE)).value) {
       await $.state.set(OVERRIDE, null)
@@ -508,11 +455,11 @@ export const register: Register = on => {
     // What the chat runs at now: the level the mod holds, else the picker's.
     seen = value ?? (asLevel(e.effort) || seen)
     if (held && e.index === 0 && enabled) {
-      const h = held
+      const pending = held
       held = null
-      if (h.mine === gen) {
-        if (mode === 'auto') await autoAdjust($, h.text, h.mine).catch(err => log($, 'auto', err))
-        else await suggest($, h.text, h.mine).catch(err => log($, 'suggest', err))
+      if (pending.mine === gen) {
+        if (mode === 'auto') await autoAdjust($, pending.text, pending.mine).catch(err => log($, 'auto', err))
+        else await suggest($, pending.text, pending.mine).catch(err => log($, 'suggest', err))
       }
       value = enabled && hold ? hold.level : null
     }
@@ -639,7 +586,6 @@ ${plan}`
         `Auto Effort Picker is ${enabled ? 'on' : 'off'}, mode: ${mode}.`,
         `Picker level: ${picker ? NAMES[picker] : 'unknown yet'}. Sent level: ${sent ? NAMES[sent] : 'unknown yet'}.`,
         `Hold: ${hold ? `${NAMES[hold.level]} until the menu moves away from ${hold.base || 'its level'}` : 'none'}.`,
-        `Effort setting: ${rowKey || 'not found, the mod sets the level on each request'}.`,
         'Type /auto-effort-picker auto, suggest, status, reset, off or on.',
       ].join('\n'),
     }
@@ -716,16 +662,10 @@ ${plan}`
             <Text color={ACCENT}>ⓘ</Text>
             <Text bold> Claude now works at {NAMES[b.level]} effort</Text>
           </Text>
-          {b.note ? (
-            <>
-              <Text dimColor>The mod sets the level on each message before it leaves your computer ({b.note}).</Text>
-              <Text dimColor>The effort menu next to the model name still shows {was}. Only you can move that menu: the app does not let a chat change its own menu.</Text>
-              <Text dimColor>To check the sent level, look for the orange "Effort {SHORT[b.level]}" label at the bottom, or type /auto-effort-picker status.</Text>
-              <Text dimColor>If you move the menu yourself, the mod follows the menu again.</Text>
-            </>
-          ) : (
-            <Text dimColor>The effort setting was changed from {was} to {NAMES[b.level]}.</Text>
-          )}
+          <Text dimColor>The mod sets the level on each message before it leaves your computer.</Text>
+          <Text dimColor>The effort menu next to the model name still shows {was}. Only you can move that menu: the app does not let a chat change its own menu.</Text>
+          <Text dimColor>To check the sent level, look for the orange "Effort {SHORT[b.level]}" label at the bottom, or type /auto-effort-picker status.</Text>
+          <Text dimColor>If you move the menu yourself, the mod follows the menu again.</Text>
           <Box flexDirection="row" gap={1}>
             <Button key="info-close" label="Got it" role="dismiss" onPress={noop} />
           </Box>

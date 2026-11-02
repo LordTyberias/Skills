@@ -1,6 +1,6 @@
 {
   "name": "auto-effort-picker",
-  "version": "0.9.2",
+  "version": "0.9.3",
   "license": "GPL-3.0-only",
   "description": "Reads each prompt, picks the effort level it needs with a four-question framework, and asks before switching to that level, or sets it by itself in auto mode. For /ticket it judges the loaded YouTrack ticket for planning, then the approved plan for the build; /repo-security-hardening likewise judges the review, then its approved plan.",
   "author": {

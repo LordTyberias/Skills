@@ -95,6 +95,27 @@ Commands: `/auto-effort-picker` or `/auto-effort-picker status` (picker level, s
 `/auto-effort-picker reset` (release the hold), `/auto-effort-picker auto`, `/auto-effort-picker suggest`,
 `/auto-effort-picker off`, `/auto-effort-picker on`.
 
+What the plugin changes and writes:
+
+- **Settings and environment:** none. It changes no setting, no environment variable and no file
+  that other tools run or obey. The level it picks is put only on the `effort` field of the main
+  chat's own requests.
+- **Files it writes**, all under `~/.claude`:
+  - `mods-logs/auto-effort-picker.log`: a log of picks, sent levels and errors (the last 20 KB).
+  - `mods-state/auto-effort-picker/<session id>.json`: one line, `<sent level> <picker level>`, which
+    an optional status line script may read to show the sent level. It is emptied when the session ends.
+- **Files it reads:** `~/.claude/mods/switches.json`, the `/mods` switchboard, to know whether it is turned off.
+
+What its hooks do:
+
+- `prompt.submit`: reads the prompt to decide whether to pick; never changes the prompt.
+- `turn.step`: reads each main-chat request's effort level and replaces it with the picked one; nothing else
+  in the request is changed. Subagent requests are not touched.
+- `tool.call` on `mcp__youtrack__get_issue`, `mcp__youtrack__update_issue` and `ExitPlanMode`: reads the
+  result after the tool ran, to pick from the ticket or the approved plan; never changes the call or its result.
+- `command.run`: answers `/auto-effort-picker`. `ui.render` and `ui.press`: draw the band above the
+  prompt and the footer label.
+
 Install:
 
 ```
