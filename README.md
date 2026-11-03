@@ -76,6 +76,7 @@ on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
 | Plugin | Purpose |
 | --- | --- |
 | [auto-effort-picker](plugins/auto-effort-picker) | Picks the effort level each prompt needs before Claude starts. For `/ticket` and `/repo-security-hardening`, it judges the work first and the approved plan again. |
+| [effort-statusline-bridge](plugins/effort-statusline-bridge) | Lets a status line script show the level auto-effort-picker holds as `<level> (auto)`. |
 
 ### auto-effort-picker
 
@@ -121,6 +122,39 @@ Install:
 ```
 /plugin marketplace add LordTyberias/Skills
 /plugin install auto-effort-picker@lordtyberias-skills
+```
+
+### effort-statusline-bridge
+
+Status line scripts get the menu level in `effort.level`, not the level auto-effort-picker puts on the
+request. This plugin writes that held level to
+`~/.claude/mods-state/effort-statusline-bridge/<session id>.json` as `{"line":"high"}`, or
+`{"line":""}` when auto-effort-picker holds none. auto-effort-picker itself is not changed and works
+without it.
+
+- **Files it writes:** the one file per session above. Files of ended sessions stay, with an empty line.
+- **Files it reads:** none. It reads the `override` state of auto-effort-picker.
+- **Hooks:** `turn.step` and `state.set` on that `override` read the held level; `session.start` and
+  `session.end` reset and clear the file. Nothing in any request is changed.
+
+Status line snippet (Node, inside a script that has the status line JSON in `j`):
+
+```js
+const lvl = j.effort?.level ?? ""
+let effort = lvl
+try {
+  const f = require("path").join(require("os").homedir(), ".claude", "mods-state",
+    "effort-statusline-bridge", j.session_id + ".json")
+  const held = JSON.parse(require("fs").readFileSync(f, "utf8")).line
+  if (held && held !== lvl) effort = held + " (auto)"
+} catch {}
+```
+
+Install:
+
+```
+/plugin marketplace add LordTyberias/Skills
+/plugin install effort-statusline-bridge@lordtyberias-skills
 ```
 
 ## License
