@@ -74,7 +74,13 @@ on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
 
 ### gradient-statusline
 
-Installs a two-line Claude Code status line: context window, 5-hour and weekly usage as 20-cell
+For Claude Code only. Install it for Claude Code alone, globally:
+
+```bash
+npx skills add LordTyberias/Skills -g -s gradient-statusline -a claude-code
+```
+
+It installs a two-line Claude Code status line: context window, 5-hour and weekly usage as 20-cell
 gradient bars with emoji and reset times, the model with its effort level, repo, branch, lines
 changed and session cost. The skill asks for the language of the labels (defaulting to the
 `language` setting) and which segments go in the top and bottom row, in which order, or whether to

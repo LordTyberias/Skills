@@ -1,11 +1,16 @@
 ---
 name: gradient-statusline
-description: Installs or adjusts a two-line truecolor Claude Code status line — gradient bars for context, 5-hour and weekly usage with reset times, model and effort level, repo, branch, changed lines and cost — with labels in the user's language and a user-chosen order of segments in the top and bottom row. Adapts an existing status line instead of silently replacing it. Use when the user wants this status line, wants to change its language or segment order, or invokes /gradient-statusline.
+description: Claude Code only. Installs or adjusts a two-line truecolor Claude Code status line — gradient bars for context, 5-hour and weekly usage with reset times, model and effort level, repo, branch, changed lines and cost — with labels in the user's language and a user-chosen order of segments in the top and bottom row. Adapts an existing status line instead of silently replacing it. Use when the user wants this status line, wants to change its language or segment order, or invokes /gradient-statusline.
 ---
 
 You install the status line script that ships next to this file (`statusline-command.sh`) for the
 user, or adjust the copy they already have. Only the config block of the script changes per user;
 everything below `# --- end config ---` is copied unchanged.
+
+**This skill is for Claude Code only.** The script reads the JSON that Claude Code pipes to its
+`statusLine` command and is registered in Claude Code's `settings.json`; no other agent has either.
+If you are not running inside Claude Code, tell the user that this skill only works there and stop
+without changing anything.
 
 ## What the status line shows
 
