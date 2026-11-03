@@ -27,9 +27,18 @@ bottom: repo   branch   lines    cost
 | `lines` | `+added/-removed` this session; hidden while both are 0 |
 | `cost` | `💰 $<session cost>` |
 
-Reset times show `HH:MM` when the reset is today, otherwise `<weekday> HH:MM`. If the optional
-`effort-statusline-bridge` plugin is installed, the effort shows the level auto-effort-picker holds
-as `<level> (auto)`; without it the script falls back to the menu level.
+Reset times show `HH:MM` when the reset is today, otherwise `<weekday> HH:MM`. The effort shows
+the level auto-effort-picker holds as `<level> (auto)` only when both optional plugins are installed:
+`auto-effort-picker` (picks the level) and `effort-statusline-bridge` (hands it to the script). The
+bridge alone always hands over an empty value. Without both, the script shows the menu level. If the
+user asks about `(auto)` or has only one of the two, mention this in the report and how to install
+the missing one:
+
+```text
+/plugin marketplace add LordTyberias/Skills
+/plugin install auto-effort-picker@lordtyberias-skills
+/plugin install effort-statusline-bridge@lordtyberias-skills
+```
 
 ## Step 1 — Prerequisites
 

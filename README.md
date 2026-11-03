@@ -87,8 +87,9 @@ overwrite it. A backup goes to `~/.claude/statusline-command.sh.bak-<timestamp>`
 report explains step by step how to restore the old status line, with the exact path, copy command
 and previous `statusLine` value. Only the `statusLine` key in
 `~/.claude/settings.json` is touched. Needs `bash` (Git Bash on Windows), `node`, `awk` and `git`.
-Pairs with the [effort-statusline-bridge](#effort-statusline-bridge) plugin to show the effort level
-auto-effort-picker holds.
+To show the effort level auto-effort-picker holds as `<level> (auto)`, install both
+[auto-effort-picker](#auto-effort-picker) and [effort-statusline-bridge](#effort-statusline-bridge);
+the bridge alone never shows `(auto)`. Without them the status line shows the menu level.
 
 ## Plugins
 
