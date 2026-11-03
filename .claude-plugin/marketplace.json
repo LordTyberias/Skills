@@ -16,7 +16,7 @@
       "name": "effort-statusline-bridge",
       "source": "./plugins/effort-statusline-bridge",
       "description": "Writes the effort level auto-effort-picker holds to a per-session file, so a status line script can show it as \"<level> (auto)\".",
-      "version": "0.1.1"
+      "version": "0.1.2"
     }
   ]
 }

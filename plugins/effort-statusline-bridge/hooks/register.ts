@@ -12,7 +12,7 @@ let last: string | null = null
 
 // shortcut: home guessed from the mod's own path (it lives under ~/.claude); no engine API gives it.
 function homeOf($: EngineInterface) {
-  const m = /^(.*?)[\/]\.claude[\/]/.exec($.plugin.root)
+  const m = /^(.*?)[\\/]\.claude[\\/]/.exec($.plugin.root)
   return m?.[1] ?? ''
 }
 
