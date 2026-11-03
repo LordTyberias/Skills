@@ -80,6 +80,8 @@ For Claude Code only. Install it for Claude Code alone, globally:
 npx skills add LordTyberias/Skills -g -s gradient-statusline -a claude-code
 ```
 
+![gradient-statusline with English labels and the default layout](docs/images/gradient-statusline.png)
+
 It installs a two-line Claude Code status line: context window, 5-hour and weekly usage as 20-cell
 gradient bars with emoji and reset times, the model with its effort level, repo, branch, lines
 changed and session cost. The skill asks for the language of the labels (defaulting to the
