@@ -14,6 +14,7 @@ npx skills add LordTyberias/Skills
 | --- | --- |
 | [review-agents-setup](skills/review-agents-setup/SKILL.md) | Generates a mandatory pre-pull-request review loop tailored to the repository it runs in. |
 | [repo-security-hardening](skills/repo-security-hardening/SKILL.md) | Runs a full security review of a repository in one pass: inventory first, then only the checks that fit, ending in a report with change proposals. |
+| [gradient-statusline](skills/gradient-statusline/SKILL.md) | Installs or adjusts a two-line truecolor status line with gradient usage bars, in the user's language and with a user-chosen segment order. |
 
 ### review-agents-setup
 
@@ -70,6 +71,24 @@ starts the implementation, and each selected change becomes its own commit on a 
 If the `grill-with-docs` skill is installed, the round runs through it, and rejected changes can be
 recorded as ADRs. Works
 on Windows (PowerShell) and Linux/macOS (Bash); .NET gets the deepest coverage.
+
+### gradient-statusline
+
+Installs a two-line Claude Code status line: context window, 5-hour and weekly usage as 20-cell
+gradient bars with emoji and reset times, the model with its effort level, repo, branch, lines
+changed and session cost. The skill asks for the language of the labels (defaulting to the
+`language` setting) and which segments go in the top and bottom row, in which order, or whether to
+hide some or use a single row.
+
+An existing status line is never replaced silently. If it is this one, the skill reads its current
+language and layout and changes only the config block at the top of the script. If it is a different
+one, the skill summarizes what it shows and offers a choice: back it up and replace it, or
+overwrite it. A backup goes to `~/.claude/statusline-command.sh.bak-<timestamp>`, and the final
+report explains step by step how to restore the old status line, with the exact path, copy command
+and previous `statusLine` value. Only the `statusLine` key in
+`~/.claude/settings.json` is touched. Needs `bash` (Git Bash on Windows), `node`, `awk` and `git`.
+Pairs with the [effort-statusline-bridge](#effort-statusline-bridge) plugin to show the effort level
+auto-effort-picker holds.
 
 ## Plugins
 
