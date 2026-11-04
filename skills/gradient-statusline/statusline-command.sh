@@ -10,13 +10,14 @@ L_SESSION="5-hour"
 L_WEEKLY="Week"
 L_NO_BRANCH="no branch"
 L_NA="n/a"
+L_ULTRACODE="UltraCode"
 # Weekday abbreviations Sunday..Saturday, shown before reset times that are not today.
 DAYS="Sun Mon Tue Wed Thu Fri Sat"
 # --- end config ---
 
 input=$(cat)
 
-IFS=$'\x1f' read -r repo_name project_dir ctx_pct session_pct weekly_pct cost added removed model effort session_reset weekly_reset <<<"$(echo "$input" | SL_DAYS="$DAYS" node -e '
+IFS=$'\x1f' read -r repo_name project_dir ctx_pct session_pct weekly_pct cost added removed model effort session_reset weekly_reset ultracode <<<"$(echo "$input" | SL_DAYS="$DAYS" node -e '
 let d="";process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{
 const j=JSON.parse(d);
 const s=v=>(v===undefined||v===null)?"":String(v);
@@ -52,7 +53,27 @@ const out=[
   return lvl;
  })(),
  reset(j.rate_limits&&j.rate_limits.five_hour),
- reset(j.rate_limits&&j.rate_limits.seven_day)
+ reset(j.rate_limits&&j.rate_limits.seven_day),
+ (()=>{
+  // effort-statusline-bridge (optional plugin) also writes the ultracode session toggle (null while
+  // unknown) and whether the running turn opted in by keyword; otherwise the "ultracode" setting as
+  // Claude Code resolves it: local over project over user settings.
+  const fs=require("fs"),path=require("path"),home=require("os").homedir();
+  try{
+   const f=path.join(home,".claude","mods-state","effort-statusline-bridge",s(j.session_id)+".json");
+   const m=JSON.parse(fs.readFileSync(f,"utf8"));
+   if(m.turn===true||m.session===true) return "1";
+   if(m.session===false) return "";
+  }catch{}
+  const dir=s(j.workspace&&j.workspace.project_dir)||s(j.cwd);
+  const files=[path.join(home,".claude","settings.json")];
+  if(dir) files.push(path.join(dir,".claude","settings.json"),path.join(dir,".claude","settings.local.json"));
+  let on=false;
+  for(const f of files){
+   try{const v=JSON.parse(fs.readFileSync(f,"utf8")).ultracode;if(typeof v==="boolean") on=v;}catch{}
+  }
+  return on?"1":"";
+ })()
 ];
 process.stdout.write(out.join("\x1f"));
 });
@@ -119,7 +140,18 @@ seg_lines() {
   printf '%s' "${GREEN}+${added}${RESET}${DIM}/${RESET}${RED}-${removed}${RESET}"
 }
 seg_cost() { printf '%s' "${YELLOW}💰 $(printf '$%.2f' "$cost")${RESET}"; }
-seg_model() { printf '%s' "${MAGENTA}🤖 ${L_MODEL}: ${model}${effort:+ · 🧠 ${effort}}${RESET}"; }
+# Colors each character of $1 in turn through a rainbow.
+rainbow() {
+ local c=(255,60,60 255,150,0 255,230,0 60,210,60 0,200,255 90,110,255 200,90,255) i out="" r g b
+ # Count characters, not bytes, so a translated label with umlauts stays whole.
+ local LC_ALL=C.UTF-8
+ for ((i = 0; i < ${#1}; i++)); do
+  IFS=, read -r r g b <<<"${c[i % ${#c[@]}]}"
+  out+=$'\e[1;38;2;'"$r;$g;${b}m${1:i:1}"
+ done
+ printf '%s' "$out${RESET}"
+}
+seg_model() { printf '%s' "${MAGENTA}🤖 ${L_MODEL}: ${model}${effort:+ · 🧠 ${effort}}${RESET}${ultracode:+${MAGENTA} · ⚡ ${RESET}$(rainbow "$L_ULTRACODE")}"; }
 seg_context() {
  local bar color emoji
  IFS=$'\x1f' read -r bar color emoji <<<"$(gradient "$ctx_pct")"

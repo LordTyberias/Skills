@@ -1,10 +1,10 @@
 {
   "name": "effort-statusline-bridge",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "license": "GPL-3.0-only",
   "homepage": "https://github.com/LordTyberias/Skills/tree/master/plugins/effort-statusline-bridge",
   "repository": "https://github.com/LordTyberias/Skills",
-  "description": "Writes the effort level auto-effort-picker holds to a per-session file, so a status line script can show it as \"<level> (auto)\".",
+  "description": "Writes the effort level auto-effort-picker holds and the session's ultracode toggle to a per-session file, so a status line script can show \"<level> (auto)\" and UltraCode.",
   "author": {
     "name": "Benjamin Strecker",
     "url": "https://github.com/LordTyberias"

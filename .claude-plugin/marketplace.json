@@ -15,8 +15,8 @@
     {
       "name": "effort-statusline-bridge",
       "source": "./plugins/effort-statusline-bridge",
-      "description": "Writes the effort level auto-effort-picker holds to a per-session file, so a status line script can show it as \"<level> (auto)\".",
-      "version": "0.1.2"
+      "description": "Writes the effort level auto-effort-picker holds and the session's ultracode toggle to a per-session file, so a status line script can show \"<level> (auto)\" and UltraCode.",
+      "version": "0.2.0"
     }
   ]
 }

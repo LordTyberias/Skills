@@ -98,13 +98,18 @@ and previous `statusLine` value. Only the `statusLine` key in
 To show the effort level auto-effort-picker holds as `<level> (auto)`, install both
 [auto-effort-picker](#auto-effort-picker) and [effort-statusline-bridge](#effort-statusline-bridge);
 the bridge alone never shows `(auto)`. Without them the status line shows the menu level.
+`⚡ UltraCode` (in rainbow colors) follows the `ultracode` setting, resolved per project:
+`<project>/.claude/settings.local.json` over `<project>/.claude/settings.json` over
+`~/.claude/settings.json`. To also follow a toggle for one session only (`/effort ultracode on|off`
+or the `/effort` slider) and a single turn opted in by the keyword, install
+[effort-statusline-bridge](#effort-statusline-bridge); this part works without auto-effort-picker.
 
 ## Plugins
 
 | Plugin | Purpose |
 | --- | --- |
 | [auto-effort-picker](plugins/auto-effort-picker) | Picks the effort level each prompt needs before Claude starts. For `/ticket` and `/repo-security-hardening`, it judges the work first and the approved plan again. |
-| [effort-statusline-bridge](plugins/effort-statusline-bridge) | Lets a status line script show the level auto-effort-picker holds as `<level> (auto)`. |
+| [effort-statusline-bridge](plugins/effort-statusline-bridge) | Lets a status line script show the level auto-effort-picker holds as `<level> (auto)`, and `UltraCode` for the session's ultracode toggle and for a turn opted in by the keyword. |
 
 ### auto-effort-picker
 
@@ -155,26 +160,44 @@ Install:
 ### effort-statusline-bridge
 
 Status line scripts get the menu level in `effort.level`, not the level auto-effort-picker puts on the
-request. This plugin writes that held level to
-`~/.claude/mods-state/effort-statusline-bridge/<session id>.json` as `{"line":"high"}`, or
-`{"line":""}` when auto-effort-picker holds none. auto-effort-picker itself is not changed and works
-without it.
+request, and they get no ultracode value at all; a toggle for one session only is not stored in any
+settings file either. This plugin writes both to
+`~/.claude/mods-state/effort-statusline-bridge/<session id>.json` as
+`{"line":"high","session":true,"turn":false}`:
 
-- **Files it writes:** the one file per session above. Files of ended sessions stay, with an empty line.
-- **Files it reads:** none. It reads the `override` state of auto-effort-picker.
-- **Hooks:** `turn.step` and `state.set` on that `override` read the held level; `session.start` and
-  `session.end` reset and clear the file. Nothing in any request is changed.
+- `line`: the level auto-effort-picker holds, or `""` when it holds none (always `""` without
+  auto-effort-picker). auto-effort-picker itself is not changed and works without this plugin.
+- `session`: the session's ultracode toggle, `true` or `false` once known, `null` before. It follows
+  `/effort ultracode on|off` at once and a toggle in the `/effort` slider from the next message on,
+  when Claude Code tells the model about it.
+- `turn`: `true` while a turn runs whose prompt carries the keyword `ultracode`; it ends with the turn.
 
-Status line snippet (Node, inside a script that has the status line JSON in `j`):
+What the plugin reads and writes:
+
+- **Files it writes:** the one file per session above. Files of ended sessions stay, reset to
+  `{"line":"","session":null,"turn":false}`.
+- **Files it reads:** none. It reads the `override` state of auto-effort-picker and the
+  `USERPROFILE` or `HOME` variable to find the home folder.
+- **Hooks:** `turn.step` and `state.set` on that `override` read the held level; `command.run` on
+  `/effort` reads its arguments; `prompt.attachment` reads the type of Claude Code's ultracode on/off
+  reminders; `prompt.submit` looks for the keyword; `turn.complete` ends the keyword turn;
+  `session.start` and `session.end` reset. Nothing in any prompt, command, reminder or request is
+  changed.
+
+Status line snippet (Node, inside a script that has the status line JSON in `j`; `fromSettings` is
+the script's own lookup of the `ultracode` setting):
 
 ```js
 const lvl = j.effort?.level ?? ""
 let effort = lvl
+let ultracode = fromSettings
 try {
   const f = require("path").join(require("os").homedir(), ".claude", "mods-state",
     "effort-statusline-bridge", j.session_id + ".json")
-  const held = JSON.parse(require("fs").readFileSync(f, "utf8")).line
-  if (held && held !== lvl) effort = held + " (auto)"
+  const m = JSON.parse(require("fs").readFileSync(f, "utf8"))
+  if (m.line && m.line !== lvl) effort = m.line + " (auto)"
+  if (m.turn === true || m.session === true) ultracode = true
+  else if (m.session === false) ultracode = false
 } catch {}
 ```
 

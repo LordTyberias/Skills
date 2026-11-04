@@ -23,7 +23,7 @@ bottom: repo   branch   lines    cost
 
 | Segment | Shows |
 | --- | --- |
-| `model` | `🤖 Model: <name> · 🧠 <effort>`; the effort part only when an effort level is set |
+| `model` | `🤖 Model: <name> · 🧠 <effort>`; the effort part only when an effort level is set; `· ⚡ UltraCode` appended while ultracode is on |
 | `context` | `📊` context window usage as a 20-cell gradient bar, emoji and percentage |
 | `session` | 5-hour rate limit as a bar with `↻ <reset time>`, or `n/a` when the plan reports none |
 | `weekly` | 7-day rate limit, same format |
@@ -44,6 +44,16 @@ the missing one:
 /plugin install auto-effort-picker@lordtyberias-skills
 /plugin install effort-statusline-bridge@lordtyberias-skills
 ```
+
+`UltraCode` comes from the `ultracode` setting, resolved per project the way Claude Code resolves it:
+`<project>/.claude/settings.local.json` over `<project>/.claude/settings.json` over
+`~/.claude/settings.json`. So the user controls where it shows by the settings file they set it in.
+Claude Code passes no ultracode value to the status line, so without help a toggle for one session
+only is not visible there. The optional plugin `effort-statusline-bridge` adds it, on its own
+without auto-effort-picker: it follows `/effort ultracode on|off` at once and a toggle in the
+`/effort` slider from the next message on, and that session toggle wins over the settings. It also
+shows `UltraCode` for a single turn whose prompt carries the keyword `ultracode`. Install it as
+above.
 
 ## Step 1 — Prerequisites
 
@@ -101,6 +111,7 @@ body only if it is identical; otherwise take the shipped one). Set the config bl
 | `L_WEEKLY` | Short label for the 7-day window |
 | `L_NO_BRANCH` | Shown in parentheses when the folder is not a git repo |
 | `L_NA` | Shown when a rate limit is not reported |
+| `L_ULTRACODE` | Shown after the effort while ultracode is on |
 | `DAYS` | Seven weekday abbreviations, Sunday first, space-separated, each without spaces |
 
 Translate the labels yourself, short and natural for a status line; terms that are usually left in
